@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { User } from '../../types';
-import { Camera, GraduationCap, Shield, User as UserIcon, Edit2, Check, X, Mail } from 'lucide-react';
+import { GraduationCap, Shield, User as UserIcon, Edit2, Check, X, Mail, Image as ImageIcon } from 'lucide-react';
+import { PREDEFINED_AVATARS } from '../../constants';
 
 interface ProfileProps {
   user: User;
@@ -17,6 +18,10 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser, darkMode, t }) =>
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSelectAvatar = (url: string) => {
+    setFormData({ ...formData, avatar: url });
   };
 
   const handleSave = () => {
@@ -37,14 +42,8 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser, darkMode, t }) =>
           <div className="absolute -bottom-16 left-8 flex flex-col sm:flex-row items-center sm:items-end gap-6 z-10">
             <div className="relative group">
               <div className="w-32 h-32 rounded-lg border-4 border-white dark:border-slate-800 bg-white overflow-hidden shadow-sm">
-                <img src={formData.avatar || 'https://picsum.photos/seed/default/400'} className="w-full h-full object-cover" alt="Profile" />
+                <img src={formData.avatar || PREDEFINED_AVATARS[0]} className="w-full h-full object-cover" alt="Profile" />
               </div>
-              {isEditing && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white cursor-pointer transition-opacity">
-                  <Camera className="w-8 h-8" />
-                  <input type="text" name="avatar" value={formData.avatar} onChange={handleChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                </div>
-              )}
             </div>
             <div className="pb-2 text-center sm:text-left">
               <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-none">{user.fullName}</h2>
@@ -68,18 +67,18 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser, darkMode, t }) =>
             )}
           </div>
         </div>
-        {/* Adjusted spacing below banner to account for the larger bottom-positioned avatar */}
         <div className="pt-20 pb-8 px-8"></div>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Personal Info */}
+        {/* Left Column: Personal Info & Avatar Picker */}
         <div className="lg:col-span-2 space-y-6">
           <section className="bg-white dark:bg-slate-800 p-8 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm space-y-8">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b dark:border-slate-700 pb-4">
               <UserIcon className="w-5 h-5 text-blue-600" /> {t.personal_info}
             </h3>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.full_name}</label>
@@ -105,18 +104,33 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser, darkMode, t }) =>
                   }`}
                 />
               </div>
-              {isEditing && (
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avatar URL</label>
-                  <input 
-                    name="avatar" 
-                    value={formData.avatar} 
-                    onChange={handleChange} 
-                    className="w-full bg-slate-50 dark:bg-slate-700 p-3 rounded-lg border border-blue-500 outline-none font-bold text-blue-600"
-                  />
-                </div>
-              )}
             </div>
+
+            {isEditing && (
+              <div className="space-y-4 pt-4 border-t dark:border-slate-700">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                   <ImageIcon className="w-3 h-3" /> {t.selectAvatar}
+                </label>
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+                  {PREDEFINED_AVATARS.map((url, idx) => (
+                    <button 
+                      key={idx} 
+                      onClick={() => handleSelectAvatar(url)}
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105 active:scale-95 ${
+                        formData.avatar === url ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-100 dark:border-slate-600'
+                      }`}
+                    >
+                      <img src={url} className="w-full h-full object-cover" alt={`Avatar ${idx}`} />
+                      {formData.avatar === url && (
+                        <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
+                          <Check className="w-6 h-6 text-blue-600" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         </div>
 

@@ -12,6 +12,17 @@ export const COLORS = [
   '#06b6d4', // cyan
 ];
 
+export const PREDEFINED_AVATARS = [
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Buddy',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Caleb',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Dusty',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Eden',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Fiona',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=George',
+];
+
 // Mapping from Class Periods (Tiết) to Time slots based on the provided image
 export const PERIOD_TIME_MAP: Record<number, { start: string, end: string }> = {
   1: { start: "07:00", end: "07:50" },
@@ -140,6 +151,7 @@ export const TRANSLATIONS = {
     importSuccess: "Import successful!",
     importError: "Import failed. Please check file format.",
     analyzingImage: "Analyzing image with AI...",
+    selectAvatar: "Select Avatar",
     typeLabels: {
       REGULAR: "REG",
       ONLINE: "ONL",
@@ -260,6 +272,7 @@ export const TRANSLATIONS = {
     importSuccess: "Nhập dữ liệu thành công!",
     importError: "Lỗi nhập liệu hoặc không đọc được ảnh.",
     analyzingImage: "AI đang phân tích ảnh...",
+    selectAvatar: "Chọn ảnh đại diện",
     typeLabels: {
       REGULAR: "LỚP",
       ONLINE: "WEB",
@@ -292,5 +305,5 @@ export const INITIAL_USER = {
   email: 'student@uniflow.edu',
   fullName: 'Trung Hai',
   major: 'Công nghệ phần mềm',
-  avatar: 'https://picsum.photos/seed/student/200'
+  avatar: PREDEFINED_AVATARS[0]
 };

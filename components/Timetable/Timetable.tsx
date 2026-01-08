@@ -161,25 +161,29 @@ const Timetable: React.FC<TimetableProps> = ({ events, onAddEvent, onDeleteEvent
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
       const systemPrompt = `
-        You are an expert academic assistant. Analyze the timetable image and extract all subjects into a JSON array.
-        Each subject object must follow this structure:
+        Bạn là một trợ lý học thuật chuyên nghiệp tại Việt Nam. Phân tích ảnh thời khóa biểu và trích xuất dữ liệu.
+        Cấu trúc bảng thường có:
+        - Các cột: Thứ 2 đến Thứ 7/Chủ nhật.
+        - Các hàng: Buổi Sáng, Chiều, Tối.
+        - Mỗi ô môn học chứa: Mã môn (12 số), Tên môn, Hình thức (LT/TH), Tiết (ví dụ: "Tiết: 1-3"), Phòng (ví dụ: "Phòng: A303").
+
+        Nhiệm vụ: Trích xuất thành mảng JSON.
+        Cấu trúc mỗi đối tượng:
         {
-          "title": string,
-          "code": string,
-          "instructor": string,
-          "room": string,
-          "dayOfWeek": number (0 for Sunday, 1 for Monday... 6 for Saturday),
-          "startPeriod": number (1-14),
-          "endPeriod": number (1-14),
-          "type": "REGULAR" | "ONLINE" | "EXAM"
+          "title": string (Tên môn học),
+          "code": string (Mã môn học),
+          "instructor": string (Tên giảng viên nếu có, nếu không để "Chưa rõ"),
+          "room": string (Số phòng học, ví dụ "A303"),
+          "dayOfWeek": number (0 cho Chủ nhật, 1 cho Thứ 2, ..., 6 cho Thứ 7),
+          "startPeriod": number (Tiết bắt đầu, từ 1-14),
+          "endPeriod": number (Tiết kết thúc, từ 1-14),
+          "type": "REGULAR" (Lịch học) hoặc "EXAM" (Lịch thi)
         }
 
-        Period reference (use this to identify periods like 'Tiết 1-3'):
-        - Sáng (Morning): 1-5
-        - Chiều (Afternoon): 6-10
-        - Tối (Evening): 11-14
-
-        Output MUST be only the JSON array.
+        Lưu ý: 
+        - Nếu thấy "Tiết: 1-3" thì startPeriod=1, endPeriod=3.
+        - Nếu thấy "Tiết: 4-5" thì startPeriod=4, endPeriod=5.
+        - Output CHỈ là mảng JSON, không giải thích gì thêm.
       `;
 
       const response = await ai.models.generateContent({
@@ -207,7 +211,8 @@ const Timetable: React.FC<TimetableProps> = ({ events, onAddEvent, onDeleteEvent
                 startPeriod: { type: Type.INTEGER },
                 endPeriod: { type: Type.INTEGER },
                 type: { type: Type.STRING }
-              }
+              },
+              required: ["title", "dayOfWeek", "startPeriod", "endPeriod"]
             }
           }
         }
@@ -216,15 +221,14 @@ const Timetable: React.FC<TimetableProps> = ({ events, onAddEvent, onDeleteEvent
       const extractedData = JSON.parse(response.text);
       
       extractedData.forEach((item: any, index: number) => {
-        // Map periods to times using our shared map
-        const startTimeStr = PERIOD_TIME_MAP[item.startPeriod]?.start || "08:00";
-        const endTimeStr = PERIOD_TIME_MAP[item.endPeriod]?.end || "10:00";
+        const startTimeStr = PERIOD_TIME_MAP[item.startPeriod]?.start || "07:00";
+        const endTimeStr = PERIOD_TIME_MAP[item.endPeriod]?.end || "11:35";
 
         const newEvent: TimetableEvent = {
           id: `ai-${Date.now()}-${index}`,
           title: item.title,
           code: item.code,
-          instructor: item.instructor || "Unknown",
+          instructor: item.instructor || "Chưa rõ",
           room: item.room || "TBA",
           type: (item.type as EventType) || EventType.REGULAR,
           dayOfWeek: item.dayOfWeek,
@@ -239,7 +243,7 @@ const Timetable: React.FC<TimetableProps> = ({ events, onAddEvent, onDeleteEvent
 
       alert(t.importSuccess);
     } catch (err) {
-      console.error(err);
+      console.error("AI Analysis Error:", err);
       alert(t.importError);
     } finally {
       setIsAnalyzing(false);

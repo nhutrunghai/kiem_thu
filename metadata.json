@@ -1,0 +1,5 @@
+{
+  "name": "UniFlow - Student Timetable & Study Hub",
+  "description": "A comprehensive student management system featuring smart timetables with conflict detection, task tracking with file attachments, study statistics, and real-time reminders.",
+  "requestFramePermissions": []
+}

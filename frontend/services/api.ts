@@ -168,6 +168,13 @@ export const api = {
       });
       return handleJson(res);
     },
+    disableReminder: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/notes/${id}/reminder`, {
+        method: 'PUT',
+        headers: getHeaders()
+      });
+      return handleJson(res);
+    },
     delete: async (id: string) => {
       const res = await fetch(`${API_BASE_URL}/notes/${id}`, { method: 'DELETE', headers: getHeaders() });
       if (res.status === 401) {

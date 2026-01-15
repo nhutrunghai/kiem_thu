@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User, TimetableEvent, Task, TaskStatus } from '../../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { Calendar as CalendarIcon, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale/vi';
 import { enUS } from 'date-fns/locale/en-US';
 import { SHORT_DAYS_VI, SHORT_DAYS_EN } from '../../constants';
@@ -18,11 +18,15 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, events, tasks, onNavigate, language, t }) => {
+  const [studyRange, setStudyRange] = useState<'week' | 'month'>('week');
   const completedTasks = tasks.filter(t => t.status === TaskStatus.COMPLETED).length;
   const pendingTasks = tasks.length - completedTasks;
   const todayEvents = events.filter(e => e.dayOfWeek === new Date().getDay());
   const currentLocale = language === 'vi' ? vi : enUS;
   const shortDays = language === 'vi' ? SHORT_DAYS_VI : SHORT_DAYS_EN;
+  const rangeInterval = studyRange === 'week'
+    ? { start: startOfWeek(new Date(), { weekStartsOn: 1 }), end: endOfWeek(new Date(), { weekStartsOn: 1 }) }
+    : { start: startOfMonth(new Date()), end: endOfMonth(new Date()) };
 
   const taskData = [
     { name: t.completed, value: completedTasks, color: '#10b981' },
@@ -31,7 +35,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, events, tasks, onNavigate, 
 
   // Logic: Calculate actual study hours per day from events
   const hoursPerDay = Array(7).fill(0);
-  events.forEach(event => {
+  const efficiencyEvents = events.filter((event) => {
+    if (!event.startDate) return true;
+    const parsed = parseISO(event.startDate);
+    if (isNaN(parsed.getTime())) return true;
+    return isWithinInterval(parsed, rangeInterval);
+  });
+
+  efficiencyEvents.forEach(event => {
     const [startH, startM] = event.startTime.split(':').map(Number);
     const [endH, endM] = event.endTime.split(':').map(Number);
     const duration = (endH + endM / 60) - (startH + startM / 60);
@@ -72,6 +83,30 @@ const Dashboard: React.FC<DashboardProps> = ({ user, events, tasks, onNavigate, 
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t.studyEfficiency}</h2>
+            <div className="flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700/70 p-1">
+              <button
+                type="button"
+                onClick={() => setStudyRange('week')}
+                className={`px-3 py-1 text-xs font-semibold rounded-full transition ${
+                  studyRange === 'week'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white'
+                }`}
+              >
+                {t.thisWeek}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStudyRange('month')}
+                className={`px-3 py-1 text-xs font-semibold rounded-full transition ${
+                  studyRange === 'month'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white'
+                }`}
+              >
+                {t.thisMonth}
+              </button>
+            </div>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">

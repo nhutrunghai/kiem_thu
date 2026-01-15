@@ -174,6 +174,15 @@ const App: React.FC = () => {
     setNotes(prev => prev.filter(n => (n._id || n.id) !== noteId));
   };
 
+  const disableNoteReminder = async (noteId: string) => {
+    const updated = await api.notes.disableReminder(noteId);
+    const normalized = { ...updated, id: updated.id || updated._id };
+    setNotes(prev => prev.map(n => {
+      const currentId = n._id || n.id;
+      return currentId === noteId ? { ...n, ...normalized } : n;
+    }));
+  };
+
   const handleUpdateUser = async (updatedUser: User) => {
     const userFromApi = await api.user.updateProfile(updatedUser);
     setUser(userFromApi);
@@ -278,11 +287,12 @@ const App: React.FC = () => {
               )}
               {activeTab === 'reminders' && (
                 <Reminders 
-                  tasks={tasks} 
-                  events={events} 
-                  darkMode={darkMode} 
-                  t={t} 
-                  onUpdateTask={updateTask} 
+                  tasks={tasks}
+                  events={events}
+                  darkMode={darkMode}
+                  t={t}
+                  onUpdateTask={updateTask}
+                  onDisableNoteReminder={disableNoteReminder}
                   language={language}
                   notificationChannels={user.notificationChannels || ['EMAIL']}
                 />

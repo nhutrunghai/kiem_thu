@@ -5,6 +5,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const swaggerUi = require('swagger-ui-express');
+const yaml = require('js-yaml');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -26,6 +28,18 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const EMAIL_FROM = process.env.EMAIL_FROM || 'uniflow@localhost';
 const APP_BASE_URL = process.env.APP_BASE_URL || `http://localhost:${PORT}`;
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES) || 30;
+const SWAGGER_SPEC_PATH = path.join(__dirname, '..', 'swagger.yaml');
+
+const loadSwaggerSpec = () => {
+  if (!fs.existsSync(SWAGGER_SPEC_PATH)) return null;
+  try {
+    const raw = fs.readFileSync(SWAGGER_SPEC_PATH, 'utf8');
+    return yaml.load(raw);
+  } catch (e) {
+    console.error('Failed to load swagger spec:', e.message);
+    return null;
+  }
+};
 
 // --- CONFIGURATION HELPERS ---
 const normalizeEmail = (email = '') => email.trim().toLowerCase();
@@ -50,6 +64,10 @@ const hasEmailChannel = (user) => {
   if (!user || !Array.isArray(user.notificationChannels)) return true;
   return user.notificationChannels.includes('EMAIL');
 };
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+const VALID_TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'COMPLETED'];
+const VALID_TASK_PRIORITIES = ['low', 'medium', 'high'];
+const VALID_EVENT_TYPES = ['REGULAR', 'ONLINE', 'EXAM'];
 
 const upsertNotification = async ({ userId, targetId, targetType = 'TASK', channel = 'EMAIL', sendAt, title, remindBefore, dueDate }) => {
   if (!sendAt || !userId || !targetId) return;
@@ -94,7 +112,6 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   fullName: { type: String, required: true, trim: true },
-  major: { type: String, required: true, trim: true },
   avatar: String,
   notificationChannels: { type: [String], enum: ['EMAIL', 'PUSH'], default: ['EMAIL'] },
   resetTokenHash: String,
@@ -183,10 +200,9 @@ const auth = async (req, res, next) => {
 // Auth
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { email, password, fullName, major, avatar } = req.body || {};
+    const { email, password, fullName, avatar } = req.body || {};
     const normalizedEmail = normalizeEmail(email);
     const trimmedName = (fullName || '').trim();
-    const trimmedMajor = (major || '').trim();
 
     if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
       return res.status(400).json({ message: 'Invalid email' });
@@ -194,19 +210,19 @@ app.post('/api/auth/register', async (req, res) => {
     if (!password || password.length < MIN_PASSWORD_LENGTH) {
       return res.status(400).json({ message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     }
-    if (!trimmedName || !trimmedMajor) {
-      return res.status(400).json({ message: 'Full name and major are required' });
+    if (!trimmedName) {
+      return res.status(400).json({ message: 'Full name is required' });
     }
 
     let user = await User.findOne({ email: normalizedEmail });
     if (user) return res.status(400).json({ message: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    user = new User({ email: normalizedEmail, password: hashedPassword, fullName: trimmedName, major: trimmedMajor, avatar });
+    user = new User({ email: normalizedEmail, password: hashedPassword, fullName: trimmedName, avatar });
     await user.save();
 
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ token, user: { id: user._id, email: user.email, fullName: user.fullName, major: user.major, avatar: user.avatar, notificationChannels: user.notificationChannels } });
+    res.status(201).json({ token, user: { id: user._id, email: user.email, fullName: user.fullName, avatar: user.avatar, notificationChannels: user.notificationChannels } });
   } catch (e) {
     if (e.code === 11000) return res.status(400).json({ message: 'User already exists' });
     console.error('Register error:', e);
@@ -228,7 +244,7 @@ app.post('/api/auth/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user._id, email: user.email, fullName: user.fullName, major: user.major, avatar: user.avatar, notificationChannels: user.notificationChannels } });
+    res.json({ token, user: { id: user._id, email: user.email, fullName: user.fullName, avatar: user.avatar, notificationChannels: user.notificationChannels } });
   } catch (e) { res.status(500).json({ message: 'Server error' }); }
 });
 
@@ -336,12 +352,26 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
 app.get('/api/auth/me', auth, async (req, res) => {
   const user = req.user;
-  res.json({ id: user._id, email: user.email, fullName: user.fullName, major: user.major, avatar: user.avatar, notificationChannels: user.notificationChannels });
+  res.json({ id: user._id, email: user.email, fullName: user.fullName, avatar: user.avatar, notificationChannels: user.notificationChannels });
+});
+
+app.get('/api/user/profile', auth, async (req, res) => {
+  const user = req.user;
+  res.json({ id: user._id, email: user.email, fullName: user.fullName, avatar: user.avatar, notificationChannels: user.notificationChannels });
 });
 
 app.put('/api/user/profile', auth, async (req, res) => {
   try {
-    const payload = { ...req.body };
+    const allowedFields = ['fullName', 'avatar', 'notificationChannels'];
+    const payload = {};
+    for (const field of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, field)) {
+        payload[field] = req.body[field];
+      }
+    }
+    if (Object.keys(payload).length === 0) {
+      return res.status(400).json({ message: 'No valid fields to update' });
+    }
     if (Array.isArray(payload.notificationChannels)) {
       payload.notificationChannels = payload.notificationChannels.filter(c => ['EMAIL', 'PUSH'].includes(c));
     } else {
@@ -407,7 +437,7 @@ app.put('/api/user/profile', auth, async (req, res) => {
       }
     }
 
-    res.json({ id: user._id, email: user.email, fullName: user.fullName, major: user.major, avatar: user.avatar, notificationChannels: user.notificationChannels });
+    res.json({ id: user._id, email: user.email, fullName: user.fullName, avatar: user.avatar, notificationChannels: user.notificationChannels });
   } catch (e) { res.status(500).json({ message: 'Error updating profile' }); }
 });
 
@@ -419,12 +449,21 @@ app.get('/api/events', auth, async (req, res) => {
 
 app.post('/api/events', auth, async (req, res) => {
   try {
-    const { title, dayOfWeek, startTime, endTime, startDate } = req.body || {};
-    if (!title || !startDate || !startTime || !endTime) {
+    const { title, startTime, endTime, startDate, type } = req.body || {};
+    const trimmedTitle = (title || '').trim();
+    if (!trimmedTitle || !startDate || !startTime || !endTime) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    const computedDay = new Date(startDate).getDay();
+    if (type && !VALID_EVENT_TYPES.includes(type)) {
+      return res.status(400).json({ message: 'Invalid event type' });
+    }
+
+    const startDateValue = new Date(startDate);
+    if (Number.isNaN(startDateValue.getTime())) {
+      return res.status(400).json({ message: 'Invalid startDate' });
+    }
+    const computedDay = startDateValue.getDay();
 
     const startM = toMinutes(startTime);
     const endM = toMinutes(endTime);
@@ -432,7 +471,7 @@ app.post('/api/events', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid time range' });
     }
 
-    const sameDayEvents = await Event.find({ userId: req.userId, dayOfWeek: computedDay });
+    const sameDayEvents = await Event.find({ userId: req.userId, dayOfWeek: computedDay, startDate });
     const overlaps = sameDayEvents.some(ev => {
       const evStart = toMinutes(ev.startTime);
       const evEnd = toMinutes(ev.endTime);
@@ -441,7 +480,7 @@ app.post('/api/events', auth, async (req, res) => {
     });
     if (overlaps) return res.status(409).json({ message: 'Time slot already booked' });
 
-    const event = new Event({ ...req.body, userId: req.userId, dayOfWeek: computedDay });
+    const event = new Event({ ...req.body, title: trimmedTitle, userId: req.userId, dayOfWeek: computedDay });
     await event.save();
     res.status(201).json(event);
   } catch (e) { res.status(500).json({ message: 'Error creating event' }); }
@@ -450,12 +489,24 @@ app.post('/api/events', auth, async (req, res) => {
 // Update event
 app.put('/api/events/:id', auth, async (req, res) => {
   try {
-    const { title, dayOfWeek, startTime, endTime, startDate, swapWith } = req.body || {};
-    if (!title || !startDate || !startTime || !endTime) {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid event id' });
+    }
+    const { title, startTime, endTime, startDate, swapWith, type } = req.body || {};
+    const trimmedTitle = (title || '').trim();
+    if (!trimmedTitle || !startDate || !startTime || !endTime) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    const computedDay = new Date(startDate).getDay();
+    if (type && !VALID_EVENT_TYPES.includes(type)) {
+      return res.status(400).json({ message: 'Invalid event type' });
+    }
+
+    const startDateValue = new Date(startDate);
+    if (Number.isNaN(startDateValue.getTime())) {
+      return res.status(400).json({ message: 'Invalid startDate' });
+    }
+    const computedDay = startDateValue.getDay();
 
     const startM = toMinutes(startTime);
     const endM = toMinutes(endTime);
@@ -464,9 +515,9 @@ app.put('/api/events/:id', auth, async (req, res) => {
     }
 
     const excludeIds = [req.params.id];
-    if (swapWith) excludeIds.push(swapWith);
+    if (swapWith && isValidObjectId(swapWith)) excludeIds.push(swapWith);
 
-    const sameDayEvents = await Event.find({ userId: req.userId, dayOfWeek: computedDay, _id: { $nin: excludeIds } });
+    const sameDayEvents = await Event.find({ userId: req.userId, dayOfWeek: computedDay, startDate, _id: { $nin: excludeIds } });
     const overlaps = sameDayEvents.some(ev => {
       const evStart = toMinutes(ev.startTime);
       const evEnd = toMinutes(ev.endTime);
@@ -477,7 +528,7 @@ app.put('/api/events/:id', auth, async (req, res) => {
 
     const updated = await Event.findOneAndUpdate(
       { _id: req.params.id, userId: req.userId },
-      { ...req.body, dayOfWeek: computedDay },
+      { ...req.body, title: trimmedTitle, dayOfWeek: computedDay },
       { new: true }
     );
     if (!updated) return res.status(404).json({ message: 'Event not found' });
@@ -487,7 +538,11 @@ app.put('/api/events/:id', auth, async (req, res) => {
 
 app.delete('/api/events/:id', auth, async (req, res) => {
   try {
-    await Event.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid event id' });
+    }
+    const deleted = await Event.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+    if (!deleted) return res.status(404).json({ message: 'Event not found' });
     res.json({ message: 'Event deleted' });
   } catch (e) { res.status(500).json({ message: 'Error deleting event' }); }
 });
@@ -500,48 +555,93 @@ app.get('/api/tasks', auth, async (req, res) => {
 
 app.post('/api/tasks', auth, async (req, res) => {
   try {
-  const reminderEnabled = !!req.body.reminderEnabled;
-  const parsedMinutes = reminderEnabled ? Number(req.body.reminderMinutesBefore) : undefined;
-  const reminderMinutesBefore = reminderEnabled ? (Number.isNaN(parsedMinutes) ? undefined : parsedMinutes) : undefined;
-  const reminderAt = reminderEnabled ? computeReminderAt(req.body.dueDate, reminderMinutesBefore) : undefined;
-  const allowEmail = hasEmailChannel(req.user);
-  const task = new Task({ 
-    ...req.body, 
-    reminderEnabled,
-    reminderMinutesBefore,
-    reminderAt,
-    reminderSent: reminderEnabled ? false : undefined,
-    userId: req.userId 
-  });
-  await task.save();
-  if (reminderEnabled && reminderAt && allowEmail) {
-    await upsertNotification({
-      userId: req.userId,
-      targetId: task._id,
-      targetType: 'TASK',
-      channel: 'EMAIL',
-      sendAt: reminderAt,
-      title: task.title,
-      remindBefore: reminderMinutesBefore,
-      dueDate: task.dueDate
+    const { title, dueDate, status, priority } = req.body || {};
+    const trimmedTitle = (title || '').trim();
+    if (!trimmedTitle) {
+      return res.status(400).json({ message: 'Title is required' });
+    }
+    if (!dueDate || Number.isNaN(new Date(dueDate).getTime())) {
+      return res.status(400).json({ message: 'Invalid dueDate' });
+    }
+    if (status && !VALID_TASK_STATUSES.includes(status)) {
+      return res.status(400).json({ message: 'Invalid task status' });
+    }
+    if (priority && !VALID_TASK_PRIORITIES.includes(priority)) {
+      return res.status(400).json({ message: 'Invalid task priority' });
+    }
+    const reminderEnabled = !!req.body.reminderEnabled;
+    const parsedMinutes = reminderEnabled ? Number(req.body.reminderMinutesBefore) : undefined;
+    if (reminderEnabled && Number.isNaN(parsedMinutes)) {
+      return res.status(400).json({ message: 'Invalid reminderMinutesBefore' });
+    }
+    const reminderMinutesBefore = reminderEnabled ? parsedMinutes : undefined;
+    const reminderAt = reminderEnabled ? computeReminderAt(dueDate, reminderMinutesBefore) : undefined;
+    if (reminderEnabled && !reminderAt) {
+      return res.status(400).json({ message: 'Invalid reminder configuration' });
+    }
+    const allowEmail = hasEmailChannel(req.user);
+    const task = new Task({ 
+      ...req.body,
+      title: trimmedTitle,
+      reminderEnabled,
+      reminderMinutesBefore,
+      reminderAt,
+      reminderSent: reminderEnabled ? false : undefined,
+      userId: req.userId 
     });
-  } else {
-    await cancelNotification({ userId: req.userId, targetId: task._id, channel: 'EMAIL' });
-  }
+    await task.save();
+    if (reminderEnabled && reminderAt && allowEmail) {
+      await upsertNotification({
+        userId: req.userId,
+        targetId: task._id,
+        targetType: 'TASK',
+        channel: 'EMAIL',
+        sendAt: reminderAt,
+        title: task.title,
+        remindBefore: reminderMinutesBefore,
+        dueDate: task.dueDate
+      });
+    } else {
+      await cancelNotification({ userId: req.userId, targetId: task._id, channel: 'EMAIL' });
+    }
     res.json(task);
   } catch (e) { res.status(500).json({ message: 'Error creating task' }); }
 });
 
 app.put('/api/tasks/:id', auth, async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid task id' });
+    }
     const existing = await Task.findOne({ _id: req.params.id, userId: req.userId });
     if (!existing) return res.status(404).json({ message: 'Task not found' });
 
+    const { status, priority, dueDate, title } = req.body || {};
+    const trimmedTitle = title !== undefined ? (title || '').trim() : undefined;
+    if (title !== undefined && !trimmedTitle) {
+      return res.status(400).json({ message: 'Title is required' });
+    }
+    if (status && !VALID_TASK_STATUSES.includes(status)) {
+      return res.status(400).json({ message: 'Invalid task status' });
+    }
+    if (priority && !VALID_TASK_PRIORITIES.includes(priority)) {
+      return res.status(400).json({ message: 'Invalid task priority' });
+    }
+    if (dueDate && Number.isNaN(new Date(dueDate).getTime())) {
+      return res.status(400).json({ message: 'Invalid dueDate' });
+    }
+
     const reminderEnabled = !!req.body.reminderEnabled;
     const parsedMinutes = reminderEnabled ? Number(req.body.reminderMinutesBefore) : undefined;
-    const reminderMinutesBefore = reminderEnabled ? (Number.isNaN(parsedMinutes) ? undefined : parsedMinutes) : undefined;
+    if (reminderEnabled && Number.isNaN(parsedMinutes)) {
+      return res.status(400).json({ message: 'Invalid reminderMinutesBefore' });
+    }
+    const reminderMinutesBefore = reminderEnabled ? parsedMinutes : undefined;
     const effectiveDueDate = req.body.dueDate || existing.dueDate;
     const reminderAt = reminderEnabled ? computeReminderAt(effectiveDueDate, reminderMinutesBefore) : undefined;
+    if (reminderEnabled && !reminderAt) {
+      return res.status(400).json({ message: 'Invalid reminder configuration' });
+    }
     const allowEmail = hasEmailChannel(req.user);
 
     const reminderSent = reminderEnabled
@@ -554,6 +654,9 @@ app.put('/api/tasks/:id', auth, async (req, res) => {
       reminderAt,
       reminderSent
     };
+    if (trimmedTitle !== undefined) {
+      updatePayload.title = trimmedTitle;
+    }
 
     const task = await Task.findOneAndUpdate(
       { _id: req.params.id, userId: req.userId },
@@ -582,7 +685,11 @@ app.put('/api/tasks/:id', auth, async (req, res) => {
 
 app.delete('/api/tasks/:id', auth, async (req, res) => {
   try {
-    await Task.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid task id' });
+    }
+    const deleted = await Task.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+    if (!deleted) return res.status(404).json({ message: 'Task not found' });
     await cancelNotification({ userId: req.userId, targetId: req.params.id, channel: 'EMAIL' });
     res.json({ message: 'Task deleted' });
   } catch (e) { res.status(500).json({ message: 'Error deleting task' }); }
@@ -594,9 +701,24 @@ app.get('/api/notes', auth, async (req, res) => {
   res.json(notes);
 });
 
-app.post('/api/notes', auth, async (req, res) => {
+app.get('/api/notes/:eventId', auth, async (req, res) => {
   try {
-    const { eventId, content, reminderEnabled, reminderAt } = req.body;
+    const { eventId } = req.params;
+    if (!isValidObjectId(eventId)) {
+      return res.status(400).json({ message: 'Invalid event id' });
+    }
+    const note = await Note.findOne({ userId: req.userId, eventId });
+    if (!note) return res.status(404).json({ message: 'Note not found' });
+    res.json(note);
+  } catch (e) { res.status(500).json({ message: 'Error fetching note' }); }
+});
+
+  app.post('/api/notes', auth, async (req, res) => {
+    try {
+      const { eventId, content, reminderEnabled, reminderAt } = req.body;
+    if (!eventId || !isValidObjectId(eventId)) {
+      return res.status(400).json({ message: 'Invalid event id' });
+    }
     const enableReminder = !!reminderEnabled;
     let reminderAtDate = null;
     if (enableReminder && reminderAt) {
@@ -607,19 +729,20 @@ app.post('/api/notes', auth, async (req, res) => {
       if (reminderAtDate.getTime() < Date.now()) {
         return res.status(400).json({ message: 'Reminder time cannot be in the past' });
       }
+    } else if (enableReminder) {
+      return res.status(400).json({ message: 'Reminder time is required' });
     }
     const note = await Note.findOneAndUpdate(
       { userId: req.userId, eventId },
       { content, reminderEnabled: enableReminder, reminderAt: enableReminder ? reminderAtDate : null, updatedAt: Date.now() },
       { upsert: true, new: true }
     );
-    const allowEmail = hasEmailChannel(req.user);
-    if (enableReminder && reminderAtDate && allowEmail) {
-      let noteTitle = 'Note reminder';
-      if (eventId && mongoose.Types.ObjectId.isValid(eventId)) {
-        const event = await Event.findOne({ _id: eventId, userId: req.userId }).select('title');
-        if (event?.title) noteTitle = `Note: ${event.title}`;
-      }
+      if (enableReminder && reminderAtDate) {
+        let noteTitle = 'Note reminder';
+        if (eventId && mongoose.Types.ObjectId.isValid(eventId)) {
+          const event = await Event.findOne({ _id: eventId, userId: req.userId }).select('title');
+          if (event?.title) noteTitle = `Note: ${event.title}`;
+        }
       const trimmedContent = (content || '').trim();
       if (trimmedContent) {
         noteTitle = `${noteTitle} - ${trimmedContent.slice(0, 80)}`;
@@ -631,18 +754,39 @@ app.post('/api/notes', auth, async (req, res) => {
         channel: 'EMAIL',
         sendAt: reminderAtDate,
         title: noteTitle,
-        remindBefore: 0,
-        dueDate: reminderAtDate
-      });
-    } else {
-      await cancelNotification({ userId: req.userId, targetId: note._id, channel: 'EMAIL' });
+          remindBefore: 0,
+          dueDate: reminderAtDate
+        });
+      } else {
+        await cancelNotification({ userId: req.userId, targetId: note._id, channel: 'EMAIL' });
     }
-    res.json(note);
-  } catch (e) { res.status(500).json({ message: 'Error saving note' }); }
-});
+      res.json(note);
+    } catch (e) { res.status(500).json({ message: 'Error saving note' }); }
+  });
+
+  app.put('/api/notes/:id/reminder', auth, async (req, res) => {
+    try {
+      if (!isValidObjectId(req.params.id)) {
+        return res.status(400).json({ message: 'Invalid note id' });
+      }
+      const note = await Note.findOneAndUpdate(
+        { _id: req.params.id, userId: req.userId },
+        { reminderEnabled: false, reminderAt: null, updatedAt: Date.now() },
+        { new: true }
+      );
+      if (!note) return res.status(404).json({ message: 'Note not found' });
+      await cancelNotification({ userId: req.userId, targetId: note._id, channel: 'EMAIL' });
+      res.json(note);
+    } catch (e) {
+      res.status(500).json({ message: 'Error disabling note reminder' });
+    }
+  });
 
 app.delete('/api/notes/:id', auth, async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid note id' });
+    }
     const deleted = await Note.findOneAndDelete({ _id: req.params.id, userId: req.userId });
     if (!deleted) return res.status(404).json({ message: 'Note not found' });
     await cancelNotification({ userId: req.userId, targetId: req.params.id, channel: 'EMAIL' });
@@ -660,15 +804,74 @@ app.get('/api/notifications', auth, async (req, res) => {
 
 app.put('/api/notifications/:id', auth, async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid notification id' });
+    }
     const payload = { ...req.body };
-    if (payload.sendAt) payload.sendAt = new Date(payload.sendAt);
+    if (payload.sendAt) {
+      payload.sendAt = new Date(payload.sendAt);
+      if (Number.isNaN(payload.sendAt.getTime())) {
+        return res.status(400).json({ message: 'Invalid sendAt' });
+      }
+    }
     const notif = await Notification.findOneAndUpdate(
       { _id: req.params.id, userId: req.userId },
       payload,
       { new: true }
     );
+    if (!notif) return res.status(404).json({ message: 'Notification not found' });
     res.json(notif);
   } catch (e) { res.status(500).json({ message: 'Error updating notification' }); }
+});
+
+// Swagger docs (raw YAML)
+app.get('/api/docs', (req, res) => {
+  if (!fs.existsSync(SWAGGER_SPEC_PATH)) {
+    return res.status(404).json({ message: 'Swagger spec not found' });
+  }
+  res.setHeader('Content-Type', 'text/yaml');
+  res.send(fs.readFileSync(SWAGGER_SPEC_PATH, 'utf8'));
+});
+
+// Swagger UI
+app.use('/docs', swaggerUi.serve, (req, res, next) => {
+  const spec = loadSwaggerSpec();
+  if (!spec) {
+    return res.status(404).send('Swagger spec not found');
+  }
+  return swaggerUi.setup(spec, { customSiteTitle: 'UniFlow API Docs' })(req, res, next);
+});
+
+// Dashboard
+app.get('/api/dashboard/stats', auth, async (req, res) => {
+  try {
+    const [events, tasks] = await Promise.all([
+      Event.find({ userId: req.userId }).select('dayOfWeek startTime endTime'),
+      Task.find({ userId: req.userId }).select('status')
+    ]);
+
+    const today = new Date().getDay();
+    const classesToday = events.filter(event => event.dayOfWeek === today).length;
+    const completedTasks = tasks.filter(task => task.status === 'COMPLETED').length;
+    const activeTasks = tasks.length - completedTasks;
+
+    const hoursPerDay = Array(7).fill(0);
+    for (const event of events) {
+      if (typeof event.dayOfWeek !== 'number' || event.dayOfWeek < 0 || event.dayOfWeek > 6) continue;
+      const startM = toMinutes(event.startTime);
+      const endM = toMinutes(event.endTime);
+      if (startM === null || endM === null) continue;
+      const duration = (endM - startM) / 60;
+      if (duration > 0) hoursPerDay[event.dayOfWeek] += duration;
+    }
+
+    const studyHoursData = hoursPerDay.map((hours, day) => ({
+      day,
+      hours: Number(hours.toFixed(1))
+    }));
+
+    res.json({ classesToday, activeTasks, completedTasks, studyHoursData });
+  } catch (e) { res.status(500).json({ message: 'Error fetching dashboard stats' }); }
 });
 
 // --- REMINDER SCHEDULER (EMAIL) ---

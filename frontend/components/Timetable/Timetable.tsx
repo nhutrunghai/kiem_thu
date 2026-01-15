@@ -26,6 +26,7 @@ const Timetable: React.FC<TimetableProps> = ({ events, notes, onSaveNote, onAddE
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputImageRef = useRef<HTMLInputElement>(null);
   const dropzoneRef = useRef<HTMLDivElement>(null);
@@ -44,6 +45,9 @@ const Timetable: React.FC<TimetableProps> = ({ events, notes, onSaveNote, onAddE
   const localNow = new Date();
   localNow.setMinutes(localNow.getMinutes() - localNow.getTimezoneOffset());
   const nowIso = localNow.toISOString().slice(0,16);
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'excel'>('pdf');
+  const [exportTemplate, setExportTemplate] = useState<'classic' | 'compact' | 'minimal'>('classic');
+  const [exportFileName, setExportFileName] = useState(() => `timetable_${format(new Date(), 'yyyyMMdd')}`);
 
   useEffect(() => {
     if (formDate) {
@@ -58,12 +62,14 @@ const Timetable: React.FC<TimetableProps> = ({ events, notes, onSaveNote, onAddE
 
   const currentLocale = language === 'vi' ? vi : enUS;
 
-  const weekDays = useMemo(() => {
-    const day = currentDate.getDay();
+  const getWeekDays = (baseDate: Date) => {
+    const day = baseDate.getDay();
     const diff = (day + 6) % 7; 
-    const start = addDays(currentDate, -diff);
+    const start = addDays(baseDate, -diff);
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  }, [currentDate]);
+  };
+
+  const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
 
   const toMinutes = (time: string) => {
     const [h, m] = time.split(':').map(Number);
@@ -249,10 +255,13 @@ const Timetable: React.FC<TimetableProps> = ({ events, notes, onSaveNote, onAddE
       const extractedData = JSON.parse(response.text);
       let added = 0;
 
-      extractedData.forEach((item: any, index: number) => {
+      const importWeekDays = getWeekDays(currentDate);
+
+      for (let index = 0; index < extractedData.length; index++) {
+        const item = extractedData[index];
         const startTimeStr = PERIOD_TIME_MAP[item.startPeriod]?.start || "07:00";
         const endTimeStr = PERIOD_TIME_MAP[item.endPeriod]?.end || "11:35";
-        const targetDate = weekDays.find(d => d.getDay() === item.dayOfWeek) || weekDays[0];
+        const targetDate = importWeekDays.find(d => d.getDay() === item.dayOfWeek) || importWeekDays[0];
         const startDateStr = format(targetDate, 'yyyy-MM-dd');
 
         const newEvent: TimetableEvent = {
@@ -269,11 +278,15 @@ const Timetable: React.FC<TimetableProps> = ({ events, notes, onSaveNote, onAddE
           color: COLORS[index % COLORS.length]
         };
         if (checkConflict(newEvent)) {
-          return;
+          continue;
         }
-        onAddEvent(newEvent);
-        added += 1;
-      });
+        try {
+          await onAddEvent(newEvent);
+          added += 1;
+        } catch (e) {
+          console.error('Add event failed', e);
+        }
+      }
 
       if (added > 0) {
         showToast(t.importSuccess, 'success');
@@ -310,8 +323,145 @@ const Timetable: React.FC<TimetableProps> = ({ events, notes, onSaveNote, onAddE
       return newStart < existingEnd && newEnd > existingStart;
     });
   };
+  const previewEvents = useMemo(() => {
+    if (events.length > 0) return events.slice(0, 6);
+    const sampleDate = format(new Date(), 'yyyy-MM-dd');
+    return [
+      {
+        id: 'sample-1',
+        title: language === 'en' ? 'Data Structures' : 'Cấu trúc dữ liệu',
+        code: 'CTDL',
+        instructor: language === 'en' ? 'Teacher A' : 'GV A',
+        room: 'A101',
+        type: EventType.REGULAR,
+        dayOfWeek: 1,
+        startTime: '07:00',
+        endTime: '09:40',
+        startDate: sampleDate,
+        color: COLORS[0]
+      },
+      {
+        id: 'sample-2',
+        title: language === 'en' ? 'Software Testing' : 'Kiểm thử phần mềm',
+        code: 'KTPM',
+        instructor: language === 'en' ? 'Teacher B' : 'GV B',
+        room: 'A203',
+        type: EventType.REGULAR,
+        dayOfWeek: 2,
+        startTime: '09:50',
+        endTime: '11:35',
+        startDate: sampleDate,
+        color: COLORS[1]
+      },
+      {
+        id: 'sample-3',
+        title: language === 'en' ? 'Web Programming' : 'Lập trình web',
+        code: 'WEB',
+        instructor: language === 'en' ? 'Teacher C' : 'GV C',
+        room: 'Online',
+        link: 'https://meet.example',
+        type: EventType.ONLINE,
+        dayOfWeek: 3,
+        startTime: '13:30',
+        endTime: '15:10',
+        startDate: sampleDate,
+        color: COLORS[2]
+      }
+    ];
+  }, [events, language]);
 
-  const handleExportExcel = () => {
+  const ensureExportName = (value: string, ext: 'csv' | 'pdf') => {
+    const fallback = `timetable_${format(new Date(), 'yyyyMMdd')}`;
+    const base = (value || '').trim() || fallback;
+    const safeBase = base.replace(/\.(pdf|csv|xlsx)$/i, '');
+    return `${safeBase}.${ext}`;
+  };
+
+  const buildPdfHtml = (
+    template: 'classic' | 'compact' | 'minimal',
+    list: TimetableEvent[],
+    documentTitle: string,
+    withPrint = false
+  ) => {
+    const sorted = [...list].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime));
+    const rows = sorted.map(e => `
+      <tr>
+        <td>${shortDaysLabels[e.dayOfWeek]}</td>
+        <td>${e.startTime}</td>
+        <td>${e.endTime}</td>
+        <td><strong>${e.title}</strong><br/><small>${e.code || ''}</small></td>
+        <td>${e.instructor}</td>
+        <td>${e.type === EventType.ONLINE ? (e.link || 'Online') : e.room}</td>
+        <td><span class="type">${t.typeLabels[e.type]}</span></td>
+      </tr>
+    `).join('');
+
+    const headerTitle = `${t.timetable} - UniFlow`;
+    const emptyLabel = language === 'en' ? 'No data' : 'Không có dữ liệu';
+    const styles: Record<string, string> = {
+      classic: `
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 36px; color: #334155; }
+        h1 { text-align: center; color: #2563eb; margin-bottom: 28px; font-size: 22px; letter-spacing: 0.5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 13px; }
+        th { background-color: #f8fafc; font-weight: 700; text-transform: uppercase; color: #64748b; font-size: 11px; }
+        .type { font-weight: 900; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #eef2ff; color: #1e3a8a; }
+      `,
+      compact: `
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #1f2937; }
+        h1 { text-align: left; color: #111827; margin-bottom: 16px; font-size: 18px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; font-size: 12px; }
+        th { background-color: #f9fafb; font-weight: 700; text-transform: uppercase; color: #6b7280; font-size: 10px; }
+        tr:nth-child(even) td { background: #f9fafb; }
+        .type { font-weight: 800; font-size: 9px; padding: 2px 6px; border-radius: 999px; background: #e0f2fe; color: #0369a1; }
+      `,
+      minimal: `
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 28px; color: #0f172a; }
+        h1 { text-align: center; color: #0f172a; margin-bottom: 20px; font-size: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 8px; text-align: left; font-size: 12px; border-bottom: 1px solid #e2e8f0; }
+        th { font-weight: 700; text-transform: uppercase; color: #94a3b8; font-size: 10px; letter-spacing: 0.08em; }
+        .type { font-weight: 700; font-size: 9px; padding: 2px 6px; border-radius: 4px; background: #f1f5f9; color: #334155; }
+      `
+    };
+
+    return `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${documentTitle}</title>
+          <style>${styles[template] || styles.classic}</style>
+        </head>
+        <body>
+          <h1>${headerTitle}</h1>
+          <table>
+            <thead>
+              <tr>
+                <th>${t.day}</th>
+                <th>${t.startTime}</th>
+                <th>${t.endTime}</th>
+                <th>${t.subjectTitle}</th>
+                <th>${t.instructor}</th>
+                <th>${t.room}</th>
+                <th>${t.type}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows || `
+                <tr>
+                  <td colspan="7" style="text-align:center; padding: 20px; color: #94a3b8;">${emptyLabel}</td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+          ${withPrint ? '<script>window.print();</script>' : ''}
+        </body>
+      </html>
+    `;
+  };
+
+  const exportCsv = (fileNameBase: string) => {
     const headers = ["Title", "Code", "Instructor", "Room/Link", "Type", "Day", "StartTime", "EndTime"];
     const csvContent = [
       headers.join(","),
@@ -331,65 +481,35 @@ const Timetable: React.FC<TimetableProps> = ({ events, notes, onSaveNote, onAddE
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `timetable_${format(new Date(), 'yyyyMMdd')}.csv`);
+    link.setAttribute("download", ensureExportName(fileNameBase, 'csv'));
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const handleExportPDF = () => {
+  const exportPdf = (fileNameBase: string, template: 'classic' | 'compact' | 'minimal') => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-
-    const content = `
-      <html>
-        <head>
-          <title>UniFlow Timetable - ${format(new Date(), 'PPP')}</title>
-          <style>
-            body { font-family: 'Inter', sans-serif; padding: 40px; color: #334155; }
-            h1 { text-align: center; color: #2563eb; margin-bottom: 30px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 14px; }
-            th { background-color: #f8fafc; font-weight: bold; text-transform: uppercase; color: #64748b; font-size: 12px; }
-            .type { font-weight: 900; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #eee; }
-            @media print { button { display: none; } }
-          </style>
-        </head>
-        <body>
-          <h1>${t.timetable.toUpperCase()} - ${language === 'en' ? 'UniFlow' : 'Hệ Thống UniFlow'}</h1>
-          <table>
-            <thead>
-              <tr>
-                <th>${t.day}</th>
-                <th>${t.startTime}</th>
-                <th>${t.endTime}</th>
-                <th>${t.subjectTitle}</th>
-                <th>${t.instructor}</th>
-                <th>${t.room}</th>
-                <th>${t.type}</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${events.sort((a,b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime)).map(e => `
-                <tr>
-                  <td>${shortDaysLabels[e.dayOfWeek]}</td>
-                  <td>${e.startTime}</td>
-                  <td>${e.endTime}</td>
-                  <td><strong>${e.title}</strong><br/><small>${e.code || ''}</small></td>
-                  <td>${e.instructor}</td>
-                  <td>${e.type === EventType.ONLINE ? e.link : e.room}</td>
-                  <td><span class="type">${t.typeLabels[e.type]}</span></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `;
+    const documentTitle = ensureExportName(fileNameBase, 'pdf').replace(/\.pdf$/i, '');
+    const content = buildPdfHtml(template, events, documentTitle, true);
     printWindow.document.write(content);
     printWindow.document.close();
+  };
+
+  const exportPreviewHtml = useMemo(() => {
+    if (exportFormat !== 'pdf') return '';
+    const documentTitle = `${t.timetable} - UniFlow`;
+    return buildPdfHtml(exportTemplate, previewEvents, documentTitle, false);
+  }, [exportFormat, exportTemplate, previewEvents, t.timetable]);
+
+  const handleExport = () => {
+    if (exportFormat === 'excel') {
+      exportCsv(exportFileName);
+    } else {
+      exportPdf(exportFileName, exportTemplate);
+    }
+    setShowExportModal(false);
   };
 
   const handleImportImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -575,13 +695,13 @@ const Timetable: React.FC<TimetableProps> = ({ events, notes, onSaveNote, onAddE
                 <span className="text-xs font-bold hidden sm:inline">{isAnalyzing ? t.analyzingImage : t.importImage}</span>
               </button>
               <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-              <button onClick={handleExportExcel} className="p-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2 text-slate-600 dark:text-slate-300 group" title={t.exportExcel}>
-                <FileSpreadsheet className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-bold hidden sm:inline">Excel</span>
-              </button>
-              <button onClick={handleExportPDF} className="p-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2 text-slate-600 dark:text-slate-300 group" title={t.exportPDF}>
-                <FileText className="w-5 h-5 text-red-500 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-bold hidden sm:inline">PDF</span>
+              <button
+                onClick={() => setShowExportModal(true)}
+                className="p-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2 text-slate-600 dark:text-slate-300 group"
+                title={t.exportSchedule}
+              >
+                <Download className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-bold hidden sm:inline">{t.exportSchedule}</span>
               </button>
            </div>
            <div className="flex items-center bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 px-2 py-1 gap-1 text-xs font-semibold text-slate-600 dark:text-slate-200">
@@ -742,6 +862,118 @@ const Timetable: React.FC<TimetableProps> = ({ events, notes, onSaveNote, onAddE
                   <span className="rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5">{t.importImage}</span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden ${darkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}`}>
+            <div className="px-6 py-4 flex items-center justify-between border-b dark:border-slate-800">
+              <h3 className="text-lg font-black">{t.exportSchedule}</h3>
+              <button onClick={() => setShowExportModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 grid md:grid-cols-[1.1fr_0.9fr] gap-6">
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">{t.exportFileName}</label>
+                  <input
+                    value={exportFileName}
+                    onChange={(e) => setExportFileName(e.target.value)}
+                    placeholder={t.exportFileNamePlaceholder}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none font-semibold text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">{t.exportFormat}</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setExportFormat('pdf')}
+                      className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${exportFormat === 'pdf' ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-500/10' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}
+                    >
+                      <FileText className="w-5 h-5 text-red-500" />
+                      <div>
+                        <div className="text-sm font-bold">PDF</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">{t.exportFormatPDF}</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExportFormat('excel')}
+                      className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${exportFormat === 'excel' ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300'}`}
+                    >
+                      <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
+                      <div>
+                        <div className="text-sm font-bold">Excel</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">{t.exportFormatExcel}</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {exportFormat === 'pdf' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">{t.exportTemplate}</label>
+                    <div className="grid gap-3">
+                      {[
+                        { id: 'classic', label: t.exportTemplateClassic, desc: t.exportTemplateClassicDesc },
+                        { id: 'compact', label: t.exportTemplateCompact, desc: t.exportTemplateCompactDesc },
+                        { id: 'minimal', label: t.exportTemplateMinimal, desc: t.exportTemplateMinimalDesc }
+                      ].map((tpl) => (
+                        <button
+                          key={tpl.id}
+                          type="button"
+                          onClick={() => setExportTemplate(tpl.id as any)}
+                          className={`rounded-xl border p-3 text-left transition-all ${exportTemplate === tpl.id ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-500/10' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}
+                        >
+                          <div className="text-sm font-bold">{tpl.label}</div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">{tpl.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold">{t.exportPreview}</h4>
+                  {exportFormat === 'pdf' && (
+                    <span className="text-[11px] text-slate-400">{t.exportPreviewHint}</span>
+                  )}
+                </div>
+                <div className="h-[420px] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+                  {exportFormat === 'pdf' ? (
+                    <iframe title="pdf-preview" srcDoc={exportPreviewHtml} className="w-full h-full" />
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm">
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">
+                        <FileSpreadsheet className="w-6 h-6" />
+                      </div>
+                      <p className="font-semibold">{t.exportExcelHint}</p>
+                      <p className="text-xs text-slate-400 mt-1">.csv</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                {t.exportCancel}
+              </button>
+              <button
+                onClick={handleExport}
+                className="px-5 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700"
+              >
+                {t.exportNow}
+              </button>
             </div>
           </div>
         </div>

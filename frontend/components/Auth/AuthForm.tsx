@@ -17,7 +17,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [major, setMajor] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -31,6 +30,26 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
     setAuthMode(mode);
     setError('');
     setSuccess('');
+    setConfirmPassword('');
+  };
+
+  const handleBackToLogin = () => {
+    if (resetToken) {
+      if (onResetComplete) {
+        onResetComplete();
+      } else if (window?.history?.replaceState) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('token');
+        url.searchParams.delete('resetToken');
+        window.history.replaceState({}, document.title, url.toString());
+      }
+      setAuthMode('login');
+      setError('');
+      setSuccess('');
+      setConfirmPassword('');
+      return;
+    }
+    switchMode('login');
   };
 
   useEffect(() => {
@@ -103,7 +122,15 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
         const res = await api.auth.login({ email, password });
         onLogin(res.user, res.token);
       } else {
-        const res = await api.auth.register({ email, password, fullName, major });
+        if (!password || !confirmPassword) {
+          setError(t.passwordRequired || t.password);
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError(t.passwordMismatch);
+          return;
+        }
+        const res = await api.auth.register({ email, password, fullName });
         onLogin(res.user, res.token);
       }
     } catch (err: any) {
@@ -144,12 +171,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
                   <input required type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none" />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t.major}</label>
-                <div className="relative">
-                  <input required type="text" value={major} onChange={(e) => setMajor(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-4 outline-none" placeholder="Software Engineering..." />
-                </div>
-              </div>
             </>
           )}
           {!isResetPassword && (
@@ -179,6 +200,15 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
                   </button>
                 </div>
               )}
+            </div>
+          )}
+          {isRegister && (
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t.confirmPassword}</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                <input required type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none" />
+              </div>
             </div>
           )}
           {isResetPassword && (
@@ -211,7 +241,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
 
         <div className="mt-10 text-center">
           {(isForgotPassword || isResetPassword) ? (
-            <button onClick={() => switchMode('login')} className="text-blue-600 font-bold hover:underline">
+            <button onClick={handleBackToLogin} className="text-blue-600 font-bold hover:underline">
               {t.backToLogin}
             </button>
           ) : (

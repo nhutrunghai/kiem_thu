@@ -7,12 +7,12 @@ Tài liệu này liệt kê các điểm cuối (Endpoints) cần thiết để 
 
 | Phương thức | Endpoint | Mô tả | Body (JSON) |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Đăng ký tài khoản mới | `{ email, password, fullName, major }` |
+| `POST` | `/api/auth/register` | Đăng ký tài khoản mới | `{ email, password, fullName }` |
 | `POST` | `/api/auth/login` | Đăng nhập | `{ email, password }` |
 | `POST` | `/api/auth/forgot-password` | Request password reset link | `{ email }` |
 | `POST` | `/api/auth/reset-password` | Reset password using token | `{ token, password }` |
 | `GET` | `/api/user/profile` | Lấy thông tin cá nhân | (Yêu cầu Token) |
-| `PUT` | `/api/user/profile` | Cập nhật hồ sơ | `{ fullName, major, avatar }` |
+| `PUT` | `/api/user/profile` | Cập nhật hồ sơ | `{ fullName, avatar }` |
 
 ## 2. Quản lý Thời khóa biểu (Events)
 
@@ -55,3 +55,4 @@ Tài liệu này liệt kê các điểm cuối (Endpoints) cần thiết để 
 
 ---
 *Tài liệu này được cập nhật để phù hợp với kiến trúc không sử dụng tính năng upload ảnh.*
+

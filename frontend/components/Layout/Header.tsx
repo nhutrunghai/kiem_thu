@@ -48,7 +48,6 @@ const Header: React.FC<HeaderProps> = ({ activeTab, user, onNotificationClick, o
         <div className="flex items-center gap-3 pl-2 border-l border-slate-200 dark:border-slate-800">
           <div className="text-right hidden sm:block">
             <div className={`text-sm font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{user.fullName}</div>
-            <div className={`text-[10px] font-bold uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{user.major}</div>
           </div>
           <img 
             src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.fullName}`} 

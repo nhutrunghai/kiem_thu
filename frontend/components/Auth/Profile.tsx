@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User } from '../../types';
-import { GraduationCap, Shield, User as UserIcon, Edit2, Check, X, Mail, Image as ImageIcon } from 'lucide-react';
+import { Shield, User as UserIcon, Edit2, Check, X, Mail, Image as ImageIcon } from 'lucide-react';
 import { PREDEFINED_AVATARS } from '../../constants';
 
 interface ProfileProps {
@@ -47,7 +47,6 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser, darkMode, t }) =>
             </div>
             <div className="pb-2 text-center sm:text-left">
               <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-none">{user.fullName}</h2>
-              <p className="text-slate-500 font-bold text-sm uppercase tracking-widest mt-1">{user.major}</p>
             </div>
           </div>
           <div className="absolute top-4 right-8 flex gap-2">
@@ -85,18 +84,6 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser, darkMode, t }) =>
                 <input 
                   name="fullName" 
                   value={formData.fullName} 
-                  onChange={handleChange} 
-                  readOnly={!isEditing} 
-                  className={`w-full bg-slate-50 dark:bg-slate-700 p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none font-bold text-lg transition-all ${
-                    isEditing ? 'border-blue-500' : 'border-transparent'
-                  }`}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.major}</label>
-                <input 
-                  name="major" 
-                  value={formData.major} 
                   onChange={handleChange} 
                   readOnly={!isEditing} 
                   className={`w-full bg-slate-50 dark:bg-slate-700 p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none font-bold text-lg transition-all ${

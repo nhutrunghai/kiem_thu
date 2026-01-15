@@ -24,7 +24,6 @@ Lưu trữ thông tin định danh và cá nhân của sinh viên.
   "email": "string (unique)",
   "password": "string (hashed)",
   "fullName": "string",
-  "major": "string",
   "avatar": "string (Lưu URL ảnh mặc định được chọn từ hệ thống)",
   "settings": {
     "language": "string (en|vi)",
@@ -114,7 +113,6 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   fullName: String,
-  major: String,
   avatar: String // Chỉ lưu URL ảnh từ bộ chọn có sẵn
 });
 ```

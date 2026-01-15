@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Task, TimetableEvent } from '../../types';
-import { Bell, Clock, Smartphone, Mail, CheckCircle2, Trash2 } from 'lucide-react';
+import { Bell, Clock, Smartphone, Mail, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
 import { api } from '../../services/api';
@@ -11,6 +11,7 @@ interface RemindersProps {
   darkMode: boolean;
   t: any;
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
+  onDisableNoteReminder: (noteId: string) => Promise<void> | void;
   language: 'en' | 'vi';
   notificationChannels?: ('EMAIL' | 'PUSH')[];
 }
@@ -27,7 +28,7 @@ type NotificationItem = {
   remindBefore?: number;
 };
 
-const Reminders: React.FC<RemindersProps> = ({ tasks, events, darkMode, t, onUpdateTask, language, notificationChannels }) => {
+const Reminders: React.FC<RemindersProps> = ({ tasks, events, darkMode, t, onUpdateTask, onDisableNoteReminder, language, notificationChannels }) => {
   const [settings, setSettings] = useState({ push: false, email: true });
   const [typeFilter, setTypeFilter] = useState<'all' | 'task' | 'event'>('all');
   const currentLocale = language === 'vi' ? vi : enUS;
@@ -101,6 +102,26 @@ const Reminders: React.FC<RemindersProps> = ({ tasks, events, darkMode, t, onUpd
   const activeEditingTask = editingReminderId
     ? tasks.find(task => task.id === editingReminderId || (task as any)._id === editingReminderId)
     : null;
+
+  const disableTaskReminder = (taskId: string) => {
+    onUpdateTask(taskId, {
+      reminderEnabled: false,
+      reminderMinutesBefore: undefined,
+      reminderAt: undefined,
+      reminderSent: false
+    });
+  };
+
+  const disableNoteReminder = async (noteId?: string) => {
+    if (!noteId) return;
+    try {
+      await onDisableNoteReminder(noteId);
+      setNotifications(prev => prev.filter(n => n.targetId !== noteId));
+    } catch (e) {
+      console.error('Disable note reminder failed', e);
+      showToast('Cannot disable reminder', 'error');
+    }
+  };
 
   const formatDateDisplay = (d: string) => {
     const date = new Date(d);
@@ -269,12 +290,15 @@ const Reminders: React.FC<RemindersProps> = ({ tasks, events, darkMode, t, onUpd
                         {t.remindBefore}: {task.reminderMinutesBefore || 0} {t.minutesShort} | {formatDateDisplay(task.dueDate)}
                       </div>
                     </div>
-                    <button
-                      onClick={() => onUpdateTask(task.id, { reminderEnabled: false, reminderMinutesBefore: undefined, reminderAt: undefined })}
-                      className="text-xs font-semibold text-red-500 hover:text-red-600"
-                    >
-                      {t.removeReminder}
-                    </button>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-blue-500">{t.tasks}</span>
+                      <button
+                        onClick={() => disableTaskReminder(task.id)}
+                        className="text-xs font-semibold text-red-500 hover:text-red-600"
+                      >
+                        {t.removeReminder}
+                      </button>
+                    </div>
                   </div>
                 ))}
                 {showNotes && pendingNoteReminders.map(note => (
@@ -289,7 +313,15 @@ const Reminders: React.FC<RemindersProps> = ({ tasks, events, darkMode, t, onUpd
                         {t.reminderTime}: {formatDateDisplay(note.sendAt || note.dueDate || '')}
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">{t.notes}</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">{t.notes}</span>
+                      <button
+                        onClick={() => disableNoteReminder(note.targetId)}
+                        className="text-xs font-semibold text-red-500 hover:text-red-600"
+                      >
+                        {t.removeReminder}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </>
@@ -317,14 +349,15 @@ const Reminders: React.FC<RemindersProps> = ({ tasks, events, darkMode, t, onUpd
                         {t.remindBefore}: {task.reminderMinutesBefore || 0} {t.minutesShort} | {formatDateDisplay(task.dueDate)}
                       </div>
                     </div>
-                    <button
-                      onClick={() => onUpdateTask(task.id, { reminderSent: false })}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                      title={t.removeReminder}
-                      aria-label={t.removeReminder}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-blue-500">{t.tasks}</span>
+                      <button
+                        onClick={() => disableTaskReminder(task.id)}
+                        className="text-xs font-semibold text-red-500 hover:text-red-600"
+                      >
+                        {t.removeReminder}
+                      </button>
+                    </div>
                   </div>
                 ))}
                 {showNotes && sentNoteReminders.map(note => (
@@ -336,7 +369,15 @@ const Reminders: React.FC<RemindersProps> = ({ tasks, events, darkMode, t, onUpd
                         {t.reminderTime}: {formatDateDisplay(note.sendAt || note.dueDate || '')}
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">{t.notes}</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">{t.notes}</span>
+                      <button
+                        onClick={() => disableNoteReminder(note.targetId)}
+                        className="text-xs font-semibold text-red-500 hover:text-red-600"
+                      >
+                        {t.removeReminder}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </>

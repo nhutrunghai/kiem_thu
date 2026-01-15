@@ -15,7 +15,6 @@ export interface User {
   id: string;
   email: string;
   fullName: string;
-  major: string;
   avatar?: string;
   notificationChannels?: ('EMAIL' | 'PUSH')[];
 }

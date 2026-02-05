@@ -1,0 +1,9 @@
+const VALID_TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'COMPLETED'];
+const VALID_TASK_PRIORITIES = ['low', 'medium', 'high'];
+const VALID_EVENT_TYPES = ['REGULAR', 'ONLINE', 'EXAM'];
+
+module.exports = {
+  VALID_TASK_STATUSES,
+  VALID_TASK_PRIORITIES,
+  VALID_EVENT_TYPES
+};

@@ -1,0 +1,87 @@
+request,description,resetRun,enabled,baseUrl,email,password,fullName,token,resetToken,newPassword,eventId,taskId,noteId,notificationId,body,expectedStatus,expectedMessage,expectedMessageContains
+Register,Register success,1,1,http://localhost:5050,RANDOM,StrongPass123,Student Test,,,,,,,,"{""email"": ""{{email}}"", ""password"": ""{{password}}"", ""fullName"": ""{{fullName}}""}",201,,
+Register,Register duplicate email,,1,,__VALID__,StrongPass123,Student Test,,,,,,,,"{""email"": ""{{email}}"", ""password"": ""{{password}}"", ""fullName"": ""{{fullName}}""}",400,,User already exists
+Register,Register invalid email,,1,,bad-email,StrongPass123,Student Test,,,,,,,,"{""email"": ""{{email}}"", ""password"": ""{{password}}"", ""fullName"": ""{{fullName}}""}",400,,Invalid email
+Register,Register short password,,1,,RANDOM,short,Student Test,,,,,,,,"{""email"": ""{{email}}"", ""password"": ""{{password}}"", ""fullName"": ""{{fullName}}""}",400,,Password must be at least
+Register,Register missing fullName,,1,,RANDOM,StrongPass123,__EMPTY__,,,,,,,,"{""email"": ""{{email}}"", ""password"": ""{{password}}"", ""fullName"": ""{{fullName}}""}",400,,Full name is required
+Login,Login success,,1,,__VALID__,StrongPass123,,,,,,,,,"{""email"": ""{{email}}"", ""password"": ""{{password}}""}",200,,
+Login,Login invalid password,,1,,__VALID__,WrongPass123,,,,,,,,,"{""email"": ""{{email}}"", ""password"": ""{{password}}""}",400,,Invalid credentials
+Login,Login invalid email format,,1,,bad-email,StrongPass123,,,,,,,,,"{""email"": ""{{email}}"", ""password"": ""{{password}}""}",400,,Invalid credentials
+Forgot Password,Forgot password valid email,,1,,__VALID__,,,,,,,,,,"{""email"": ""{{email}}""}",200,,
+Forgot Password,Forgot password invalid email,,1,,bad-email,,,,,,,,,,"{""email"": ""{{email}}""}",200,,
+Reset Password,Reset password invalid token,,1,,,,,,invalid_token,NewStrong123,,,,,"{""token"": ""{{resetToken}}"", ""password"": ""{{newPassword}}""}",400,,Invalid or expired reset token
+Reset Password,Reset password success (manual token),,0,,,,,,__VALID__,NewStrong123,,,,,"{""token"": ""{{resetToken}}"", ""password"": ""{{newPassword}}""}",200,,
+Me,Me unauthorized (no token),,1,,,,,__EMPTY__,,,,,,,,401,,No token
+Me,Me invalid token,,1,,,,,__INVALID__,,,,,,,,401,,Token is not valid
+Me,Me success,,1,,,,,__VALID__,,,,,,,,200,,
+Get Profile,Get profile unauthorized,,1,,,,,__EMPTY__,,,,,,,,401,,No token
+Get Profile,Get profile success,,1,,,,,__VALID__,,,,,,,,200,,
+Update Profile,Update profile no valid fields,,1,,,,,__VALID__,,,,,,,{},400,,No valid fields
+Update Profile,Update profile success,,1,,,,Student Updated,__VALID__,,,,,,,"{""fullName"": ""{{fullName}}"", ""notificationChannels"": [""EMAIL""]}",200,,
+List Events,List events unauthorized,,1,,,,,__EMPTY__,,,,,,,,401,,No token
+List Events,List events success,,1,,,,,__VALID__,,,,,,,,200,,
+Create Event,Create event missing fields,,1,,,,,__VALID__,,,,,,,{},400,,Missing required fields
+Create Event,Create event invalid type,,1,,,,,__VALID__,,,,,,,"{""title"": ""Event A"", ""type"": ""INVALID"", ""startDate"": ""2026-02-10"", ""startTime"": ""09:00"", ""endTime"": ""10:30""}",400,,Invalid event type
+Create Event,Create event invalid startDate,,1,,,,,__VALID__,,,,,,,"{""title"": ""Event A"", ""type"": ""REGULAR"", ""startDate"": ""not-a-date"", ""startTime"": ""09:00"", ""endTime"": ""10:30""}",400,,Invalid startDate
+Create Event,Create event invalid time range,,1,,,,,__VALID__,,,,,,,"{""title"": ""Event A"", ""type"": ""REGULAR"", ""startDate"": ""2026-02-10"", ""startTime"": ""10:30"", ""endTime"": ""09:00""}",400,,Invalid time range
+Create Event,Create event success A,,1,,,,,__VALID__,,,,,,,"{""title"": ""Event A"", ""type"": ""REGULAR"", ""startDate"": ""2026-02-10"", ""startTime"": ""09:00"", ""endTime"": ""10:30"", ""room"": ""A1"", ""color"": ""#3b82f6""}",201,,
+Create Event,Create event success B,,1,,,,,__VALID__,,,,,,,"{""title"": ""Event B"", ""type"": ""REGULAR"", ""startDate"": ""2026-02-10"", ""startTime"": ""11:00"", ""endTime"": ""12:00"", ""room"": ""B1"", ""color"": ""#22c55e""}",201,,
+Create Event,Create event overlap conflict,,1,,,,,__VALID__,,,,,,,"{""title"": ""Event C"", ""type"": ""REGULAR"", ""startDate"": ""2026-02-10"", ""startTime"": ""09:30"", ""endTime"": ""10:00""}",409,,Time slot already booked
+Update Event,Update event invalid id,,1,,,,,__VALID__,,,__INVALID__,,,,"{""title"": ""Event A"", ""type"": ""REGULAR"", ""startDate"": ""2026-02-10"", ""startTime"": ""09:00"", ""endTime"": ""10:30""}",400,,Invalid event id
+Update Event,Update event not found,,1,,,,,__VALID__,,,64b32c3c6f9b7d0012abcd99,,,,"{""title"": ""Event A"", ""type"": ""REGULAR"", ""startDate"": ""2026-02-10"", ""startTime"": ""09:00"", ""endTime"": ""10:30""}",404,,Event not found
+Update Event,Update event missing fields,,1,,,,,__VALID__,,,__VALID__,,,,{},400,,Missing required fields
+Update Event,Update event invalid type,,1,,,,,__VALID__,,,__VALID__,,,,"{""title"": ""Event A"", ""type"": ""INVALID"", ""startDate"": ""2026-02-10"", ""startTime"": ""09:00"", ""endTime"": ""10:30""}",400,,Invalid event type
+Update Event,Update event invalid startDate,,1,,,,,__VALID__,,,__VALID__,,,,"{""title"": ""Event A"", ""type"": ""REGULAR"", ""startDate"": ""invalid"", ""startTime"": ""09:00"", ""endTime"": ""10:30""}",400,,Invalid startDate
+Update Event,Update event invalid time range,,1,,,,,__VALID__,,,__VALID__,,,,"{""title"": ""Event A"", ""type"": ""REGULAR"", ""startDate"": ""2026-02-10"", ""startTime"": ""10:30"", ""endTime"": ""09:00""}",400,,Invalid time range
+Update Event,Update event conflict,,1,,,,,__VALID__,,,__VALID__,,,,"{""title"": ""Event A"", ""type"": ""REGULAR"", ""startDate"": ""2026-02-10"", ""startTime"": ""11:30"", ""endTime"": ""12:30""}",409,,Time slot already booked
+Update Event,Update event success,,1,,,,,__VALID__,,,__VALID__,,,,"{""title"": ""Event A Updated"", ""type"": ""REGULAR"", ""startDate"": ""2026-02-10"", ""startTime"": ""13:00"", ""endTime"": ""14:00""}",200,,
+Delete Event,Delete event invalid id,,1,,,,,__VALID__,,,__INVALID__,,,,,400,,Invalid event id
+Delete Event,Delete event not found,,1,,,,,__VALID__,,,64b32c3c6f9b7d0012abcd98,,,,,404,,Event not found
+List Tasks,List tasks unauthorized,,1,,,,,__EMPTY__,,,,,,,,401,,No token
+List Tasks,List tasks success,,1,,,,,__VALID__,,,,,,,,200,,
+Create Task,Create task missing title,,1,,,,,__VALID__,,,,,,,"{""title"": """", ""dueDate"": ""2026-02-12T10:00:00.000Z""}",400,,Title is required
+Create Task,Create task invalid dueDate,,1,,,,,__VALID__,,,,,,,"{""title"": ""Task A"", ""dueDate"": ""invalid""}",400,,Invalid dueDate
+Create Task,Create task invalid status,,1,,,,,__VALID__,,,,,,,"{""title"": ""Task A"", ""dueDate"": ""2026-02-12T10:00:00.000Z"", ""status"": ""BAD""}",400,,Invalid task status
+Create Task,Create task invalid priority,,1,,,,,__VALID__,,,,,,,"{""title"": ""Task A"", ""dueDate"": ""2026-02-12T10:00:00.000Z"", ""priority"": ""urgent""}",400,,Invalid task priority
+Create Task,Create task invalid reminderMinutesBefore,,1,,,,,__VALID__,,,,,,,"{""title"": ""Task A"", ""dueDate"": ""2026-02-12T10:00:00.000Z"", ""reminderEnabled"": true, ""reminderMinutesBefore"": ""abc""}",400,,Invalid reminderMinutesBefore
+Create Task,Create task invalid reminder configuration,,1,,,,,__VALID__,,,,,,,"{""title"": ""Task A"", ""dueDate"": ""2026-02-12T10:00:00.000Z"", ""reminderEnabled"": true, ""reminderMinutesBefore"": -5}",400,,Invalid reminder configuration
+Create Task,Create task success,,1,,,,,__VALID__,,,,,,,"{""title"": ""Task A"", ""description"": ""Do tests"", ""dueDate"": ""2026-02-12T10:00:00.000Z"", ""priority"": ""high"", ""status"": ""TODO"", ""reminderEnabled"": true, ""reminderMinutesBefore"": 30}",200,,
+Update Task,Update task invalid id,,1,,,,,__VALID__,,,,__INVALID__,,,"{""status"": ""IN_PROGRESS""}",400,,Invalid task id
+Update Task,Update task not found,,1,,,,,__VALID__,,,,64b32c3c6f9b7d0012abcd97,,,"{""status"": ""IN_PROGRESS""}",404,,Task not found
+Update Task,Update task title empty,,1,,,,,__VALID__,,,,__VALID__,,,"{""title"": """"}",400,,Title is required
+Update Task,Update task invalid status,,1,,,,,__VALID__,,,,__VALID__,,,"{""status"": ""BAD""}",400,,Invalid task status
+Update Task,Update task invalid priority,,1,,,,,__VALID__,,,,__VALID__,,,"{""priority"": ""urgent""}",400,,Invalid task priority
+Update Task,Update task invalid dueDate,,1,,,,,__VALID__,,,,__VALID__,,,"{""dueDate"": ""invalid""}",400,,Invalid dueDate
+Update Task,Update task invalid reminderMinutesBefore,,1,,,,,__VALID__,,,,__VALID__,,,"{""reminderEnabled"": true, ""reminderMinutesBefore"": ""abc""}",400,,Invalid reminderMinutesBefore
+Update Task,Update task invalid reminder configuration,,1,,,,,__VALID__,,,,__VALID__,,,"{""reminderEnabled"": true, ""reminderMinutesBefore"": -5}",400,,Invalid reminder configuration
+Update Task,Update task success,,1,,,,,__VALID__,,,,__VALID__,,,"{""status"": ""IN_PROGRESS"", ""reminderEnabled"": false}",200,,
+Delete Task,Delete task invalid id,,1,,,,,__VALID__,,,,__INVALID__,,,,400,,Invalid task id
+Delete Task,Delete task not found,,1,,,,,__VALID__,,,,64b32c3c6f9b7d0012abcd96,,,,404,,Task not found
+Delete Task,Delete task success,,1,,,,,__VALID__,,,,__VALID__,,,,200,,
+List Notes,List notes unauthorized,,1,,,,,__EMPTY__,,,,,,,,401,,No token
+List Notes,List notes success,,1,,,,,__VALID__,,,,,,,,200,,
+Get Note by Event,Get note by event invalid id,,1,,,,,__VALID__,,,__INVALID__,,,,,400,,Invalid event id
+Get Note by Event,Get note by event not found,,1,,,,,__VALID__,,,__VALID__,,,,,404,,Note not found
+Upsert Note,Upsert note invalid event id,,1,,,,,__VALID__,,,__INVALID__,,,,"{""eventId"": ""{{eventId}}"", ""content"": ""Test""}",400,,Invalid event id
+Upsert Note,Upsert note missing reminder time,,1,,,,,__VALID__,,,__VALID__,,,,"{""eventId"": ""{{eventId}}"", ""content"": ""Test"", ""reminderEnabled"": true}",400,,Reminder time is required
+Upsert Note,Upsert note invalid reminder time,,1,,,,,__VALID__,,,__VALID__,,,,"{""eventId"": ""{{eventId}}"", ""content"": ""Test"", ""reminderEnabled"": true, ""reminderAt"": ""invalid""}",400,,Invalid reminder time
+Upsert Note,Upsert note reminder time in past,,1,,,,,__VALID__,,,__VALID__,,,,"{""eventId"": ""{{eventId}}"", ""content"": ""Test"", ""reminderEnabled"": true, ""reminderAt"": ""2025-01-01T09:00:00.000Z""}",400,,cannot be in the past
+Upsert Note,Upsert note success,,1,,,,,__VALID__,,,__VALID__,,,,"{""eventId"": ""{{eventId}}"", ""content"": ""Chapter 1 review"", ""reminderEnabled"": true, ""reminderAt"": ""2026-02-11T09:00:00.000Z""}",200,,
+Get Note by Event,Get note by event success,,1,,,,,__VALID__,,,__VALID__,,,,,200,,
+Disable Note Reminder,Disable note reminder invalid id,,1,,,,,__VALID__,,,,,__INVALID__,,,400,,Invalid note id
+Disable Note Reminder,Disable note reminder not found,,1,,,,,__VALID__,,,,,64b32c3c6f9b7d0012abcd95,,,404,,Note not found
+Disable Note Reminder,Disable note reminder success,,1,,,,,__VALID__,,,,,__VALID__,,,200,,
+Delete Note,Delete note invalid id,,1,,,,,__VALID__,,,,,__INVALID__,,,400,,Invalid note id
+Delete Note,Delete note not found,,1,,,,,__VALID__,,,,,64b32c3c6f9b7d0012abcd94,,,404,,Note not found
+Delete Note,Delete note success,,1,,,,,__VALID__,,,,,__VALID__,,,200,,
+List Notifications,List notifications unauthorized,,1,,,,,__EMPTY__,,,,,,,,401,,No token
+List Notifications,List notifications success,,1,,,,,__VALID__,,,,,,,,200,,
+Update Notification,Update notification invalid id,,1,,,,,__VALID__,,,,,,__INVALID__,"{""sendAt"": ""2026-02-12T09:00:00.000Z"", ""status"": ""PENDING""}",400,,Invalid notification id
+Update Notification,Update notification not found,,1,,,,,__VALID__,,,,,,64b32c3c6f9b7d0012abcd93,"{""sendAt"": ""2026-02-12T09:00:00.000Z"", ""status"": ""PENDING""}",404,,Notification not found
+Update Notification,Update notification invalid sendAt,,1,,,,,__VALID__,,,,,,__VALID__,"{""sendAt"": ""invalid"", ""status"": ""PENDING""}",400,,Invalid sendAt
+Update Notification,Update notification success,,1,,,,,__VALID__,,,,,,__VALID__,"{""sendAt"": ""2026-02-12T09:00:00.000Z"", ""status"": ""PENDING""}",200,,
+Get Dashboard Stats,Dashboard stats unauthorized,,1,,,,,__EMPTY__,,,,,,,,401,,No token
+Get Dashboard Stats,Dashboard stats success,,1,,,,,__VALID__,,,,,,,,200,,
+Get Docs,Get docs success,,1,,,,,,,,,,,,,200,,
+Get Docs,Get docs not found (manual),,0,,,,,,,,,,,,,404,,
+Delete Event,Delete event success,,1,,,,,__VALID__,,,__VALID__,,,,,200,,

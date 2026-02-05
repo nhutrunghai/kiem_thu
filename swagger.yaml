@@ -11,9 +11,10 @@ tags:
   - name: Users
   - name: Events
   - name: Tasks
-  - name: Notes
+  - name: Notes 
   - name: Notifications
   - name: Dashboard
+  - name: Docs
 paths:
   /api/auth/register:
     post:
@@ -664,6 +665,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/notes/{id}/reminder:
+    put:
+      tags: [Notes]
+      summary: Disable note reminder
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: Note id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '400':
+          description: Invalid note id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/notifications:
     get:
       tags: [Notifications]
@@ -729,6 +778,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/dashboard/stats:
     get:
       tags: [Dashboard]
@@ -748,6 +803,24 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/docs:
+    get:
+      tags: [Docs]
+      summary: Get raw Swagger YAML
+      security: []
+      responses:
+        '200':
+          description: Swagger YAML
+          content:
+            text/yaml:
+              schema:
+                type: string
+        '404':
+          description: Swagger spec not found
           content:
             application/json:
               schema:

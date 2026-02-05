@@ -25,12 +25,13 @@
                             "script": {
                                 "type": "text/javascript",
                                 "exec": [
-                                    "const data = pm.iterationData ? pm.iterationData.toObject() : {};",
+                                    "const data = pm.iterationData.toObject();",
                                     "if (data.request && data.request !== pm.info.requestName) {",
                                     "  pm.execution.skipRequest();",
                                     "}",
                                     "if (data.body) {",
-                                    "  pm.request.body.raw = typeof data.body === 'string' ? data.body : JSON.stringify(data.body);",
+                                    "  let bodyStr = typeof data.body === 'string' ? data.body : JSON.stringify(data.body);",
+                                    "  pm.request.body.raw = pm.variables.replaceIn(bodyStr);",
                                     "}"
                                 ]
                             }
@@ -42,16 +43,25 @@
                                 "exec": [
                                     "const expectedStatus = pm.iterationData.get('expectedStatus');",
                                     "if (expectedStatus) {",
-                                    "  pm.test(`Status ${expectedStatus}`, function () {",
+                                    "  pm.test(`[${pm.iterationData.get('case')}] Status ${expectedStatus}`, function () {",
                                     "    pm.response.to.have.status(parseInt(expectedStatus, 10));",
                                     "  });",
                                     "}",
-                                    "const expectedMessageContains = pm.iterationData.get('expectedMessageContains');",
-                                    "if (expectedMessageContains) {",
-                                    "  pm.test(`Message contains: ${expectedMessageContains}`, function () {",
+                                    "// Tự động lưu Token nếu thành công (201)",
+                                    "if (pm.response.code === 201) {",
+                                    "  const json = pm.response.json();",
+                                    "  if (json.token) {",
+                                    "    pm.environment.set('token', json.token);",
+                                    "    pm.collectionVariables.set('token', json.token);",
+                                    "    console.log('Token saved from Register');",
+                                    "  }",
+                                    "}",
+                                    "const expectedMsg = pm.iterationData.get('expectedMessageContains');",
+                                    "if (expectedMsg) {",
+                                    "  pm.test(`Message contains: ${expectedMsg}`, function () {",
                                     "    const json = pm.response.json();",
                                     "    const msg = json.message || json.error || '';",
-                                    "    pm.expect(msg).to.include(expectedMessageContains);",
+                                    "    pm.expect(msg).to.include(expectedMsg);",
                                     "  });",
                                     "}"
                                 ]
@@ -96,12 +106,13 @@
                             "script": {
                                 "type": "text/javascript",
                                 "exec": [
-                                    "const data = pm.iterationData ? pm.iterationData.toObject() : {};",
+                                    "const data = pm.iterationData.toObject();",
                                     "if (data.request && data.request !== pm.info.requestName) {",
                                     "  pm.execution.skipRequest();",
                                     "}",
                                     "if (data.body) {",
-                                    "  pm.request.body.raw = typeof data.body === 'string' ? data.body : JSON.stringify(data.body);",
+                                    "  let bodyStr = typeof data.body === 'string' ? data.body : JSON.stringify(data.body);",
+                                    "  pm.request.body.raw = pm.variables.replaceIn(bodyStr);",
                                     "}"
                                 ]
                             }
@@ -113,22 +124,25 @@
                                 "exec": [
                                     "const expectedStatus = pm.iterationData.get('expectedStatus');",
                                     "if (expectedStatus) {",
-                                    "  pm.test(`Status ${expectedStatus}`, function () {",
+                                    "  pm.test(`[${pm.iterationData.get('case')}] Status ${expectedStatus}`, function () {",
                                     "    pm.response.to.have.status(parseInt(expectedStatus, 10));",
                                     "  });",
                                     "}",
+                                    "// Tự động lưu Token nếu thành công (200)",
                                     "if (pm.response.code === 200) {",
                                     "  const json = pm.response.json();",
                                     "  if (json.token) {",
+                                    "    pm.environment.set('token', json.token);",
                                     "    pm.collectionVariables.set('token', json.token);",
+                                    "    console.log('Token saved from Login');",
                                     "  }",
                                     "}",
-                                    "const expectedMessageContains = pm.iterationData.get('expectedMessageContains');",
-                                    "if (expectedMessageContains) {",
-                                    "  pm.test(`Message contains: ${expectedMessageContains}`, function () {",
+                                    "const expectedMsg = pm.iterationData.get('expectedMessageContains');",
+                                    "if (expectedMsg) {",
+                                    "  pm.test(`Message contains: ${expectedMsg}`, function () {",
                                     "    const json = pm.response.json();",
                                     "    const msg = json.message || json.error || '';",
-                                    "    pm.expect(msg).to.include(expectedMessageContains);",
+                                    "    pm.expect(msg).to.include(expectedMsg);",
                                     "  });",
                                     "}"
                                 ]
@@ -178,12 +192,13 @@
                             "script": {
                                 "type": "text/javascript",
                                 "exec": [
-                                    "const data = pm.iterationData ? pm.iterationData.toObject() : {};",
+                                    "const data = pm.iterationData.toObject();",
                                     "if (data.request && data.request !== pm.info.requestName) {",
                                     "  pm.execution.skipRequest();",
                                     "}",
                                     "if (data.body) {",
-                                    "  pm.request.body.raw = typeof data.body === 'string' ? data.body : JSON.stringify(data.body);",
+                                    "  let bodyStr = typeof data.body === 'string' ? data.body : JSON.stringify(data.body);",
+                                    "  pm.request.body.raw = pm.variables.replaceIn(bodyStr);",
                                     "}"
                                 ]
                             }
@@ -195,16 +210,16 @@
                                 "exec": [
                                     "const expectedStatus = pm.iterationData.get('expectedStatus');",
                                     "if (expectedStatus) {",
-                                    "  pm.test(`Status ${expectedStatus}`, function () {",
+                                    "  pm.test(`[${pm.iterationData.get('case')}] Status ${expectedStatus}`, function () {",
                                     "    pm.response.to.have.status(parseInt(expectedStatus, 10));",
                                     "  });",
                                     "}",
-                                    "const expectedMessageContains = pm.iterationData.get('expectedMessageContains');",
-                                    "if (expectedMessageContains) {",
-                                    "  pm.test(`Message contains: ${expectedMessageContains}`, function () {",
+                                    "const expectedMsg = pm.iterationData.get('expectedMessageContains');",
+                                    "if (expectedMsg) {",
+                                    "  pm.test(`Message contains: ${expectedMsg}`, function () {",
                                     "    const json = pm.response.json();",
                                     "    const msg = json.message || json.error || '';",
-                                    "    pm.expect(msg).to.include(expectedMessageContains);",
+                                    "    pm.expect(msg).to.include(expectedMsg);",
                                     "  });",
                                     "}"
                                 ]

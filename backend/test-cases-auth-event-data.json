@@ -14,7 +14,7 @@
         "request": "Register",
         "case": "Email đã tồn tại",
         "body": {
-            "email": "test@example.com",
+            "email": "newuser@example.com",
             "password": "StrongPass123",
             "fullName": "Nguyen Van A"
         },
@@ -77,8 +77,8 @@
         "request": "Login",
         "case": "Đăng nhập thành công",
         "body": {
-            "email": "test@example.com",
-            "password": "password123"
+            "email": "newuser@example.com",
+            "password": "StrongPass123"
         },
         "expectedStatus": 200,
         "expectedMessageContains": ""
@@ -87,7 +87,7 @@
         "request": "Login",
         "case": "Sai mật khẩu",
         "body": {
-            "email": "test@example.com",
+            "email": "newuser@example.com",
             "password": "WrongPass"
         },
         "expectedStatus": 400,
@@ -98,7 +98,7 @@
         "case": "Email không hợp lệ",
         "body": {
             "email": "bad-email",
-            "password": "password123"
+            "password": "StrongPass123"
         },
         "expectedStatus": 400,
         "expectedMessageContains": "Invalid credentials"
@@ -107,7 +107,7 @@
         "request": "Login",
         "case": "Thiếu mật khẩu",
         "body": {
-            "email": "test@example.com"
+            "email": "newuser@example.com"
         },
         "expectedStatus": 400,
         "expectedMessageContains": "Invalid credentials"
@@ -117,7 +117,7 @@
         "case": "Email không tồn tại",
         "body": {
             "email": "missing@example.com",
-            "password": "password123"
+            "password": "StrongPass123"
         },
         "expectedStatus": 400,
         "expectedMessageContains": "Invalid credentials"
@@ -132,7 +132,7 @@
             "endTime": "10:00"
         },
         "expectedStatus": 401,
-        "expectedMessageContains": "No token"
+        "expectedMessageContains": "Token is not valid"
     },
     {
         "request": "Create Event",

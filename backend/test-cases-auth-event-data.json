@@ -90,7 +90,7 @@
             "email": "newuser@example.com",
             "password": "WrongPass"
         },
-        "expectedStatus": 400,
+        "expectedStatus": 401,
         "expectedMessageContains": "Invalid credentials"
     },
     {
@@ -101,7 +101,7 @@
             "password": "StrongPass123"
         },
         "expectedStatus": 400,
-        "expectedMessageContains": "Invalid credentials"
+        "expectedMessageContains": "Invalid email"
     },
     {
         "request": "Login",
@@ -110,7 +110,7 @@
             "email": "newuser@example.com"
         },
         "expectedStatus": 400,
-        "expectedMessageContains": "Invalid credentials"
+        "expectedMessageContains": "Missing required fields"
     },
     {
         "request": "Login",
@@ -119,7 +119,7 @@
             "email": "missing@example.com",
             "password": "StrongPass123"
         },
-        "expectedStatus": 400,
+        "expectedStatus": 401,
         "expectedMessageContains": "Invalid credentials"
     },
     {

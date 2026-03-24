@@ -1,0 +1,11 @@
+tc_id,tc_name,precondition,email,password,include_email,include_password,expected_code,expected_message,expect_token,expect_user,expected_user_email
+TC01,Dang nhap thanh cong,Tai khoan da ton tai va thong tin dang nhap dung,newuser@example.com,12345678,TRUE,TRUE,200,,TRUE,TRUE,newuser@example.com
+TC02,Sai mat khau,Tai khoan da ton tai,newuser@example.com,654321,TRUE,TRUE,401,Invalid credentials,FALSE,FALSE,
+TC03,Email khong ton tai,Email chua duoc dang ky trong he thong,missing@example.com,12345678,TRUE,TRUE,401,Invalid credentials,FALSE,FALSE,
+TC04,Email sai dinh dang,Khong co,bad-email,12345678,TRUE,TRUE,400,Invalid email,FALSE,FALSE,
+TC05,Thieu password,Khong co,newuser@example.com,,TRUE,FALSE,400,Missing required fields,FALSE,FALSE,
+TC06,Thieu email,Khong co,,12345678,FALSE,TRUE,400,Missing required fields,FALSE,FALSE,
+TC07,Thieu ca email va password,Khong co,,,FALSE,FALSE,400,Missing required fields,FALSE,FALSE,
+TC08,Email viet hoa thuong hon hop,Tai khoan da ton tai,NEWUSER@EXAMPLE.COM,12345678,TRUE,TRUE,200,,TRUE,TRUE,newuser@example.com
+TC09,Email co khoang trang dau cuoi,Tai khoan da ton tai,  newuser@example.com  ,12345678,TRUE,TRUE,200,,TRUE,TRUE,newuser@example.com
+TC10,Password co khoang trang dau cuoi,Tai khoan da ton tai,newuser@example.com,12345678,TRUE,TRUE,401,Invalid credentials,FALSE,FALSE,

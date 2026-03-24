@@ -1,0 +1,117 @@
+{
+  "info": {
+    "name": "TC08 - Email viet hoa thuong hon hop",
+    "_postman_id": "1c8629b1-0898-481a-87fa-07e4b8138546",
+    "description": "Manual login test case TC08.\nPrecondition: Tai khoan newuser@example.com da ton tai.\nExpected status: 200\nBody da duoc nhung san, chi can bam Send trong Postman.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5050"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "TC08 - Email viet hoa thuong hon hop",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 200;",
+              "const expectedMessage = \"\";",
+              "const expectToken = true;",
+              "const expectUser = true;",
+              "const expectedUserEmail = \"newuser@example.com\";",
+              "",
+              "pm.test(\"[TC08] Email viet hoa thuong hon hop - Status code is 200\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "if (expectedMessage) {",
+              "  pm.test(\"[TC08] Email viet hoa thuong hon hop - Message contains expected text\", function () {",
+              "    const actualMessage = json.message || json.error || \"\";",
+              "    pm.expect(actualMessage).to.include(expectedMessage);",
+              "  });",
+              "}",
+              "",
+              "if (expectToken) {",
+              "  pm.test(\"[TC08] Email viet hoa thuong hon hop - Response has token\", function () {",
+              "    pm.expect(json.token).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "  if (json.token) {",
+              "    pm.collectionVariables.set(\"token\", json.token);",
+              "  }",
+              "} else {",
+              "  pm.test(\"[TC08] Email viet hoa thuong hon hop - Response does not include token\", function () {",
+              "    pm.expect(json.token).to.be.undefined;",
+              "  });",
+              "}",
+              "",
+              "if (expectUser) {",
+              "  pm.test(\"[TC08] Email viet hoa thuong hon hop - Response has user object\", function () {",
+              "    pm.expect(json.user).to.be.an(\"object\");",
+              "    pm.expect(json.user.email).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "} else {",
+              "  pm.test(\"[TC08] Email viet hoa thuong hon hop - Response does not include user object\", function () {",
+              "    pm.expect(json.user).to.be.undefined;",
+              "  });",
+              "}",
+              "",
+              "if (expectedUserEmail) {",
+              "  pm.test(\"[TC08] Email viet hoa thuong hon hop - User email is normalized\", function () {",
+              "    pm.expect(json.user.email).to.eql(expectedUserEmail);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"NEWUSER@EXAMPLE.COM\",\n  \"password\": \"12345678\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC08 - Email viet hoa thuong hon hop\nPrecondition: Tai khoan newuser@example.com da ton tai.\nPayload da co san trong request body."
+      },
+      "response": []
+    }
+  ]
+}

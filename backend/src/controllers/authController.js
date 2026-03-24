@@ -42,16 +42,19 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body || {};
-    const normalizedEmail = normalizeEmail(email);
+    const normalizedEmail = typeof email === 'string' ? normalizeEmail(email) : '';
 
-    if (!normalizedEmail || !isValidEmail(normalizedEmail) || !password) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: 'Invalid email' });
     }
 
     const user = await User.findOne({ email: normalizedEmail });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id: user._id, email: user.email, fullName: user.fullName, avatar: user.avatar, notificationChannels: user.notificationChannels } });
   } catch (e) {

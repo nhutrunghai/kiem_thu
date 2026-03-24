@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { User } from '../../types';
-import { Mail, Lock, User as UserIcon, ArrowRight, Loader2 } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 import { api } from '../../services/api';
 
 interface AuthFormProps {
@@ -12,6 +12,7 @@ interface AuthFormProps {
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComplete }) => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,17 +21,25 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const isLogin = authMode === 'login';
   const isRegister = authMode === 'register';
   const isForgotPassword = authMode === 'forgot';
   const isResetPassword = authMode === 'reset';
 
+  const resetPasswordVisibility = () => {
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
+
   const switchMode = (mode: 'login' | 'register' | 'forgot' | 'reset') => {
     setAuthMode(mode);
     setError('');
     setSuccess('');
     setConfirmPassword('');
+    resetPasswordVisibility();
   };
 
   const handleBackToLogin = () => {
@@ -47,6 +56,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
       setError('');
       setSuccess('');
       setConfirmPassword('');
+      resetPasswordVisibility();
       return;
     }
     switchMode('login');
@@ -57,21 +67,120 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
       setAuthMode('reset');
       setError('');
       setSuccess('');
+      resetPasswordVisibility();
       return;
     }
     if (authMode === 'reset') {
       setAuthMode('login');
+      resetPasswordVisibility();
     }
   }, [resetToken, authMode]);
 
-  const translateError = (msg: string, isLoginMode: boolean) => {
+  const translateError = (msg: string, mode: 'login' | 'register' | 'forgot' | 'reset') => {
     const lower = (msg || '').toLowerCase();
-    if (lower.includes('credentials')) return 'Invalid email or password';
-    if (lower.includes('already exists')) return 'Account already exists';
-    if (lower.includes('invalid email')) return 'Invalid email';
-    if (lower.includes('password')) return 'Invalid password';
-    if (lower.includes('missing') || lower.includes('required')) return 'Missing required fields';
-    return isLoginMode ? 'Login failed' : 'Registration failed';
+    if (lower.includes('invalid credentials')) return t.invalidCredentials;
+    if (lower.includes('already exists')) return t.accountAlreadyExists;
+    if (lower.includes('invalid email')) return t.invalidEmailFormat;
+    if (lower.includes('password must be at least')) return t.passwordTooShort;
+    if (lower.includes('full name is required')) return t.fullNameRequired;
+    if (lower.includes('missing required fields')) {
+      return mode === 'login' ? t.credentialsRequired : t.missingRequiredFields;
+    }
+    if (lower.includes('server error')) {
+      if (mode === 'login') return t.loginFailed;
+      if (mode === 'register') return t.registrationFailed;
+      return t.resetFailed;
+    }
+    if (mode === 'forgot') return t.resetRequestFailed;
+    if (mode === 'reset') return t.resetFailed;
+    return mode === 'login' ? t.loginFailed : t.registrationFailed;
+  };
+
+  const validateEmail = (value: string) => emailPattern.test(value);
+
+  const validateLogin = () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail && !password) {
+      setError(t.credentialsRequired);
+      return null;
+    }
+    if (!trimmedEmail) {
+      setError(t.emailRequired);
+      return null;
+    }
+    if (!validateEmail(trimmedEmail)) {
+      setError(t.invalidEmailFormat);
+      return null;
+    }
+    if (!password) {
+      setError(t.passwordRequired);
+      return null;
+    }
+    return { email: trimmedEmail, password };
+  };
+
+  const validateRegister = () => {
+    const trimmedFullName = fullName.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedFullName) {
+      setError(t.fullNameRequired);
+      return null;
+    }
+    if (!trimmedEmail) {
+      setError(t.emailRequired);
+      return null;
+    }
+    if (!validateEmail(trimmedEmail)) {
+      setError(t.invalidEmailFormat);
+      return null;
+    }
+    if (!password || !confirmPassword) {
+      setError(t.passwordRequired);
+      return null;
+    }
+    if (password.length < 8) {
+      setError(t.passwordTooShort);
+      return null;
+    }
+    if (password !== confirmPassword) {
+      setError(t.passwordMismatch);
+      return null;
+    }
+    return { email: trimmedEmail, password, fullName: trimmedFullName };
+  };
+
+  const validateForgotPassword = () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError(t.emailRequired);
+      return null;
+    }
+    if (!validateEmail(trimmedEmail)) {
+      setError(t.invalidEmailFormat);
+      return null;
+    }
+    return { email: trimmedEmail };
+  };
+
+  const validateResetPassword = () => {
+    if (!resetToken) {
+      setError(t.resetTokenInvalid || t.resetFailed);
+      return null;
+    }
+    if (!password || !confirmPassword) {
+      setError(t.passwordRequired || t.password);
+      return null;
+    }
+    if (password.length < 8) {
+      setError(t.passwordTooShort);
+      return null;
+    }
+    if (password !== confirmPassword) {
+      setError(t.passwordMismatch);
+      return null;
+    }
+    return { token: resetToken, password };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,28 +191,20 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
 
     try {
       if (isForgotPassword) {
-        if (!email.trim()) {
-          setError(t.emailRequired || t.email);
+        const payload = validateForgotPassword();
+        if (!payload) {
           return;
         }
-        await api.auth.forgotPassword({ email });
+        await api.auth.forgotPassword(payload);
         setSuccess(t.resetLinkSent);
         return;
       }
       if (isResetPassword) {
-        if (!resetToken) {
-          setError(t.resetTokenInvalid || t.resetFailed);
+        const payload = validateResetPassword();
+        if (!payload) {
           return;
         }
-        if (!password || !confirmPassword) {
-          setError(t.passwordRequired || t.password);
-          return;
-        }
-        if (password !== confirmPassword) {
-          setError(t.passwordMismatch);
-          return;
-        }
-        await api.auth.resetPassword({ token: resetToken, password });
+        await api.auth.resetPassword(payload);
         setSuccess(t.resetSuccess);
         setPassword('');
         setConfirmPassword('');
@@ -119,29 +220,59 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
         return;
       }
       if (isLogin) {
-        const res = await api.auth.login({ email, password });
+        const payload = validateLogin();
+        if (!payload) {
+          return;
+        }
+        const res = await api.auth.login(payload);
         onLogin(res.user, res.token);
       } else {
-        if (!password || !confirmPassword) {
-          setError(t.passwordRequired || t.password);
+        const payload = validateRegister();
+        if (!payload) {
           return;
         }
-        if (password !== confirmPassword) {
-          setError(t.passwordMismatch);
-          return;
-        }
-        const res = await api.auth.register({ email, password, fullName });
+        const res = await api.auth.register(payload);
         onLogin(res.user, res.token);
       }
     } catch (err: any) {
-      const msg = err?.message
-        ? err.message
-        : (isForgotPassword ? t.resetRequestFailed : (isResetPassword ? t.resetFailed : translateError('', isLogin)));
+      const currentMode = isForgotPassword ? 'forgot' : (isResetPassword ? 'reset' : (isLogin ? 'login' : 'register'));
+      const msg = translateError(err?.message || '', currentMode);
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  const renderPasswordField = (
+    label: string,
+    value: string,
+    onChange: (value: string) => void,
+    isVisible: boolean,
+    onToggle: () => void
+  ) => (
+    <div>
+      <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{label}</label>
+      <div className="relative">
+        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+        <input
+          required
+          type={isVisible ? 'text' : 'password'}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-12 py-4 outline-none"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+          aria-label={isVisible ? t.hidePassword : t.showPassword}
+          title={isVisible ? t.hidePassword : t.showPassword}
+        >
+          {isVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 relative overflow-hidden">
@@ -161,7 +292,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
           {success && <p className="mt-4 text-emerald-600 text-sm font-bold bg-emerald-50 py-2 rounded-lg">{success}</p>}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} noValidate className="space-y-6">
           {isRegister && (
             <>
               <div>
@@ -184,11 +315,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
           )}
           {!isForgotPassword && !isResetPassword && (
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t.password}</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none" />
-              </div>
+              {renderPasswordField(
+                t.password,
+                password,
+                setPassword,
+                showPassword,
+                () => setShowPassword((current) => !current)
+              )}
               {isLogin && (
                 <div className="mt-3 text-right">
                   <button
@@ -203,30 +336,30 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin, t, resetToken, onResetComp
             </div>
           )}
           {isRegister && (
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t.confirmPassword}</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                <input required type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none" />
-              </div>
-            </div>
+            renderPasswordField(
+              t.confirmPassword,
+              confirmPassword,
+              setConfirmPassword,
+              showConfirmPassword,
+              () => setShowConfirmPassword((current) => !current)
+            )
           )}
           {isResetPassword && (
             <>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t.newPassword}</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                  <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t.confirmPassword}</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                  <input required type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none" />
-                </div>
-              </div>
+              {renderPasswordField(
+                t.newPassword,
+                password,
+                setPassword,
+                showPassword,
+                () => setShowPassword((current) => !current)
+              )}
+              {renderPasswordField(
+                t.confirmPassword,
+                confirmPassword,
+                setConfirmPassword,
+                showConfirmPassword,
+                () => setShowConfirmPassword((current) => !current)
+              )}
             </>
           )}
           <button

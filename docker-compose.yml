@@ -1,0 +1,46 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: uniflow-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: uniflow-backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      PORT: 5050
+      MONGODB_URI: mongodb://localhost:27017/UniFlow_DB
+      JWT_SECRET: change-me
+      EMAIL_FROM: uniflow@localhost
+      APP_BASE_URL: http://localhost:5050
+      RESET_TOKEN_TTL_MINUTES: 30
+      SMTP_HOST: ""
+      SMTP_PORT: 587
+      SMTP_USER: ""
+      SMTP_PASS: ""
+    ports:
+      - "5050:5050"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: uniflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  mongo_data:

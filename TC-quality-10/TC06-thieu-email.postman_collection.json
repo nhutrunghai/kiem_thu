@@ -1,0 +1,117 @@
+{
+  "info": {
+    "name": "TC06 - Thieu email",
+    "_postman_id": "06a3d772-73cf-498f-a10a-bf24924428d7",
+    "description": "Manual login test case TC06.\nPrecondition: Khong can du lieu truoc.\nExpected status: 400 | Expected message contains: Missing required fields\nBody da duoc nhung san, chi can bam Send trong Postman.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5050"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "TC06 - Thieu email",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 400;",
+              "const expectedMessage = \"Missing required fields\";",
+              "const expectToken = false;",
+              "const expectUser = false;",
+              "const expectedUserEmail = \"\";",
+              "",
+              "pm.test(\"[TC06] Thieu email - Status code is 400\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "if (expectedMessage) {",
+              "  pm.test(\"[TC06] Thieu email - Message contains expected text\", function () {",
+              "    const actualMessage = json.message || json.error || \"\";",
+              "    pm.expect(actualMessage).to.include(expectedMessage);",
+              "  });",
+              "}",
+              "",
+              "if (expectToken) {",
+              "  pm.test(\"[TC06] Thieu email - Response has token\", function () {",
+              "    pm.expect(json.token).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "  if (json.token) {",
+              "    pm.collectionVariables.set(\"token\", json.token);",
+              "  }",
+              "} else {",
+              "  pm.test(\"[TC06] Thieu email - Response does not include token\", function () {",
+              "    pm.expect(json.token).to.be.undefined;",
+              "  });",
+              "}",
+              "",
+              "if (expectUser) {",
+              "  pm.test(\"[TC06] Thieu email - Response has user object\", function () {",
+              "    pm.expect(json.user).to.be.an(\"object\");",
+              "    pm.expect(json.user.email).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "} else {",
+              "  pm.test(\"[TC06] Thieu email - Response does not include user object\", function () {",
+              "    pm.expect(json.user).to.be.undefined;",
+              "  });",
+              "}",
+              "",
+              "if (expectedUserEmail) {",
+              "  pm.test(\"[TC06] Thieu email - User email is normalized\", function () {",
+              "    pm.expect(json.user.email).to.eql(expectedUserEmail);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"password\": \"12345678\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC06 - Thieu email\nPrecondition: Khong can du lieu truoc.\nPayload da co san trong request body."
+      },
+      "response": []
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "info": {
+    "name": "Manual Login Automation - Data Driven",
+    "_postman_id": "8d2d8779-a718-4b1d-b27f-4ca704e397a4",
+    "description": "Collection for automation of manual login test cases TC01-TC10 using one request and one CSV data file.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5050"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Login - Data Driven",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const includeEmail = String(pm.iterationData.get(\"include_email\") || \"true\").toLowerCase() === \"true\";",
+              "const includePassword = String(pm.iterationData.get(\"include_password\") || \"true\").toLowerCase() === \"true\";",
+              "const rawEmail = pm.iterationData.get(\"email\");",
+              "const rawPassword = pm.iterationData.get(\"password\");",
+              "const email = rawEmail === undefined || rawEmail === null ? \"\" : String(rawEmail);",
+              "const password = rawPassword === undefined || rawPassword === null ? \"\" : String(rawPassword);",
+              "",
+              "const payload = {};",
+              "if (includeEmail) payload.email = email;",
+              "if (includePassword) payload.password = password;",
+              "",
+              "pm.request.body.raw = JSON.stringify(payload, null, 2);",
+              "console.log(`Preparing payload for ${pm.iterationData.get(\"tc_id\")}:`, payload);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Lấy dữ liệu từ file CSV",
+              "let id = pm.iterationData.get(\"tc_id\");",
+              "let name = pm.iterationData.get(\"tc_name\");",
+              "let expected = pm.iterationData.get(\"expected_code\");",
+              "",
+              "// Hiển thị tên Test Case theo ID trong bảng kết quả",
+              "pm.test(`[${id}] ${name} - Status code is ${expected}`, function () {",
+              "    pm.response.to.have.status(parseInt(expected));",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "    json = pm.response.json();",
+              "} catch (e) {",
+              "    json = {};",
+              "}",
+              "",
+              "const expectedMessage = pm.iterationData.get(\"expected_message\");",
+              "if (expectedMessage) {",
+              "    pm.test(`[${id}] ${name} - Message contains expected text`, function () {",
+              "        const actualMessage = json.message || json.error || \"\";",
+              "        pm.expect(actualMessage).to.include(expectedMessage);",
+              "    });",
+              "}",
+              "",
+              "const expectToken = String(pm.iterationData.get(\"expect_token\") || \"false\").toLowerCase() === \"true\";",
+              "if (expectToken && json && json.token !== undefined) {",
+              "    pm.test(`[${id}] ${name} - Response has token`, function () {",
+              "        pm.expect(json.token).to.be.a(\"string\").and.not.empty;",
+              "    });",
+              "}",
+              "",
+              "const expectUser = String(pm.iterationData.get(\"expect_user\") || \"false\").toLowerCase() === \"true\";",
+              "if (expectUser && json && json.user !== undefined) {",
+              "    pm.test(`[${id}] ${name} - Response has user object`, function () {",
+              "        pm.expect(json.user).to.be.an(\"object\");",
+              "        pm.expect(json.user.email).to.be.a(\"string\").and.not.empty;",
+              "    });",
+              "}",
+              "",
+              "const expectedUserEmail = pm.iterationData.get(\"expected_user_email\");",
+              "if (expectedUserEmail && json && json.user && json.user.email !== undefined) {",
+              "    pm.test(`[${id}] ${name} - User email is normalized`, function () {",
+              "        pm.expect(json.user.email).to.eql(expectedUserEmail);",
+              "    });",
+              "}",
+              "",
+              "if (pm.response.code === 200 && json.token) {",
+              "    pm.collectionVariables.set(\"token\", json.token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Run this request in Postman Runner with manual-login-data.csv."
+      },
+      "response": []
+    }
+  ]
+}

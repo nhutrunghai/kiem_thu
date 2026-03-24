@@ -1,0 +1,117 @@
+{
+  "info": {
+    "name": "TC02 - Sai mat khau",
+    "_postman_id": "cb7375bd-0fbb-438a-a4d0-645f33355168",
+    "description": "Manual login test case TC02.\nPrecondition: Tai khoan newuser@example.com da ton tai.\nExpected status: 401 | Expected message contains: Invalid credentials\nBody da duoc nhung san, chi can bam Send trong Postman.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5050"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "TC02 - Sai mat khau",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 401;",
+              "const expectedMessage = \"Invalid credentials\";",
+              "const expectToken = false;",
+              "const expectUser = false;",
+              "const expectedUserEmail = \"\";",
+              "",
+              "pm.test(\"[TC02] Sai mat khau - Status code is 401\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "if (expectedMessage) {",
+              "  pm.test(\"[TC02] Sai mat khau - Message contains expected text\", function () {",
+              "    const actualMessage = json.message || json.error || \"\";",
+              "    pm.expect(actualMessage).to.include(expectedMessage);",
+              "  });",
+              "}",
+              "",
+              "if (expectToken) {",
+              "  pm.test(\"[TC02] Sai mat khau - Response has token\", function () {",
+              "    pm.expect(json.token).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "  if (json.token) {",
+              "    pm.collectionVariables.set(\"token\", json.token);",
+              "  }",
+              "} else {",
+              "  pm.test(\"[TC02] Sai mat khau - Response does not include token\", function () {",
+              "    pm.expect(json.token).to.be.undefined;",
+              "  });",
+              "}",
+              "",
+              "if (expectUser) {",
+              "  pm.test(\"[TC02] Sai mat khau - Response has user object\", function () {",
+              "    pm.expect(json.user).to.be.an(\"object\");",
+              "    pm.expect(json.user.email).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "} else {",
+              "  pm.test(\"[TC02] Sai mat khau - Response does not include user object\", function () {",
+              "    pm.expect(json.user).to.be.undefined;",
+              "  });",
+              "}",
+              "",
+              "if (expectedUserEmail) {",
+              "  pm.test(\"[TC02] Sai mat khau - User email is normalized\", function () {",
+              "    pm.expect(json.user.email).to.eql(expectedUserEmail);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"654321\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC02 - Sai mat khau\nPrecondition: Tai khoan newuser@example.com da ton tai.\nPayload da co san trong request body."
+      },
+      "response": []
+    }
+  ]
+}

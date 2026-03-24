@@ -76,6 +76,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
+          description: Missing required fields or invalid email format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
           description: Invalid credentials
           content:
             application/json:

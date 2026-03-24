@@ -2,9 +2,11 @@
 // Tự động xác định BASE URL: 
 // Nếu đang chạy local (localhost) thì gọi đến port 5050
 // Nếu đã deploy lên server thật thì dùng đường dẫn tương đối (vừa chạy web vừa chạy API trên cùng 1 port)
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5050/api' 
-  : '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  window.location.hostname === 'localhost'
+    ? 'http://localhost:5050/api'
+    : '/api'
+);
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');

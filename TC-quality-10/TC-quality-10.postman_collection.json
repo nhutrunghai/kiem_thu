@@ -1,0 +1,759 @@
+{
+  "info": {
+    "name": "TC-quality-10 - Manual Login",
+    "_postman_id": "0e5f76cb-b2cb-41fb-8e08-b9afdb301001",
+    "description": "Import 1 lan se co du 10 request TC01-TC10 de test login. Moi request da co san body va test script, chi can bam Send.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5050"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "TC01 - Dang nhap thanh cong",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 200;",
+              "const expectedMessage = \"\";",
+              "const expectToken = true;",
+              "const expectUser = true;",
+              "const expectedUserEmail = \"newuser@example.com\";",
+              "",
+              "pm.test(\"[TC01] Dang nhap thanh cong - Status code is 200\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "if (expectedMessage) {",
+              "  pm.test(\"[TC01] Dang nhap thanh cong - Message contains expected text\", function () {",
+              "    const actualMessage = json.message || json.error || \"\";",
+              "    pm.expect(actualMessage).to.include(expectedMessage);",
+              "  });",
+              "}",
+              "",
+              "if (expectToken) {",
+              "  pm.test(\"[TC01] Dang nhap thanh cong - Response has token\", function () {",
+              "    pm.expect(json.token).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "  if (json.token) {",
+              "    pm.collectionVariables.set(\"token\", json.token);",
+              "  }",
+              "}",
+              "",
+              "if (expectUser) {",
+              "  pm.test(\"[TC01] Dang nhap thanh cong - Response has user object\", function () {",
+              "    pm.expect(json.user).to.be.an(\"object\");",
+              "    pm.expect(json.user.email).to.eql(expectedUserEmail);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"12345678\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC01 - Dang nhap thanh cong. Body da co san, bam Send."
+      },
+      "response": []
+    },
+    {
+      "name": "TC02 - Sai mat khau",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 401;",
+              "const expectedMessage = \"Invalid credentials\";",
+              "",
+              "pm.test(\"[TC02] Sai mat khau - Status code is 401\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "pm.test(\"[TC02] Sai mat khau - Message contains expected text\", function () {",
+              "  const actualMessage = json.message || json.error || \"\";",
+              "  pm.expect(actualMessage).to.include(expectedMessage);",
+              "});",
+              "",
+              "pm.test(\"[TC02] Sai mat khau - Response does not include token\", function () {",
+              "  pm.expect(json.token).to.be.undefined;",
+              "});",
+              "",
+              "pm.test(\"[TC02] Sai mat khau - Response does not include user object\", function () {",
+              "  pm.expect(json.user).to.be.undefined;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"654321\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC02 - Sai mat khau. Body da co san, bam Send."
+      },
+      "response": []
+    },
+    {
+      "name": "TC03 - Email khong ton tai",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 401;",
+              "const expectedMessage = \"Invalid credentials\";",
+              "",
+              "pm.test(\"[TC03] Email khong ton tai - Status code is 401\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "pm.test(\"[TC03] Email khong ton tai - Message contains expected text\", function () {",
+              "  const actualMessage = json.message || json.error || \"\";",
+              "  pm.expect(actualMessage).to.include(expectedMessage);",
+              "});",
+              "",
+              "pm.test(\"[TC03] Email khong ton tai - Response does not include token\", function () {",
+              "  pm.expect(json.token).to.be.undefined;",
+              "});",
+              "",
+              "pm.test(\"[TC03] Email khong ton tai - Response does not include user object\", function () {",
+              "  pm.expect(json.user).to.be.undefined;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"missing@example.com\",\n  \"password\": \"12345678\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC03 - Email khong ton tai. Body da co san, bam Send."
+      },
+      "response": []
+    },
+    {
+      "name": "TC04 - Email sai dinh dang",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 400;",
+              "const expectedMessage = \"Invalid email\";",
+              "",
+              "pm.test(\"[TC04] Email sai dinh dang - Status code is 400\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "pm.test(\"[TC04] Email sai dinh dang - Message contains expected text\", function () {",
+              "  const actualMessage = json.message || json.error || \"\";",
+              "  pm.expect(actualMessage).to.include(expectedMessage);",
+              "});",
+              "",
+              "pm.test(\"[TC04] Email sai dinh dang - Response does not include token\", function () {",
+              "  pm.expect(json.token).to.be.undefined;",
+              "});",
+              "",
+              "pm.test(\"[TC04] Email sai dinh dang - Response does not include user object\", function () {",
+              "  pm.expect(json.user).to.be.undefined;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"bad-email\",\n  \"password\": \"12345678\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC04 - Email sai dinh dang. Body da co san, bam Send."
+      },
+      "response": []
+    },
+    {
+      "name": "TC05 - Thieu password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 400;",
+              "const expectedMessage = \"Missing required fields\";",
+              "",
+              "pm.test(\"[TC05] Thieu password - Status code is 400\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "pm.test(\"[TC05] Thieu password - Message contains expected text\", function () {",
+              "  const actualMessage = json.message || json.error || \"\";",
+              "  pm.expect(actualMessage).to.include(expectedMessage);",
+              "});",
+              "",
+              "pm.test(\"[TC05] Thieu password - Response does not include token\", function () {",
+              "  pm.expect(json.token).to.be.undefined;",
+              "});",
+              "",
+              "pm.test(\"[TC05] Thieu password - Response does not include user object\", function () {",
+              "  pm.expect(json.user).to.be.undefined;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"newuser@example.com\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC05 - Thieu password. Body da co san, bam Send."
+      },
+      "response": []
+    },
+    {
+      "name": "TC06 - Thieu email",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 400;",
+              "const expectedMessage = \"Missing required fields\";",
+              "",
+              "pm.test(\"[TC06] Thieu email - Status code is 400\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "pm.test(\"[TC06] Thieu email - Message contains expected text\", function () {",
+              "  const actualMessage = json.message || json.error || \"\";",
+              "  pm.expect(actualMessage).to.include(expectedMessage);",
+              "});",
+              "",
+              "pm.test(\"[TC06] Thieu email - Response does not include token\", function () {",
+              "  pm.expect(json.token).to.be.undefined;",
+              "});",
+              "",
+              "pm.test(\"[TC06] Thieu email - Response does not include user object\", function () {",
+              "  pm.expect(json.user).to.be.undefined;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"password\": \"12345678\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC06 - Thieu email. Body da co san, bam Send."
+      },
+      "response": []
+    },
+    {
+      "name": "TC07 - Thieu ca email va password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 400;",
+              "const expectedMessage = \"Missing required fields\";",
+              "",
+              "pm.test(\"[TC07] Thieu ca email va password - Status code is 400\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "pm.test(\"[TC07] Thieu ca email va password - Message contains expected text\", function () {",
+              "  const actualMessage = json.message || json.error || \"\";",
+              "  pm.expect(actualMessage).to.include(expectedMessage);",
+              "});",
+              "",
+              "pm.test(\"[TC07] Thieu ca email va password - Response does not include token\", function () {",
+              "  pm.expect(json.token).to.be.undefined;",
+              "});",
+              "",
+              "pm.test(\"[TC07] Thieu ca email va password - Response does not include user object\", function () {",
+              "  pm.expect(json.user).to.be.undefined;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC07 - Thieu ca email va password. Body da co san, bam Send."
+      },
+      "response": []
+    },
+    {
+      "name": "TC08 - Email viet hoa thuong hon hop",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 200;",
+              "const expectedMessage = \"\";",
+              "const expectToken = true;",
+              "const expectUser = true;",
+              "const expectedUserEmail = \"newuser@example.com\";",
+              "",
+              "pm.test(\"[TC08] Email viet hoa thuong hon hop - Status code is 200\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "if (expectedMessage) {",
+              "  pm.test(\"[TC08] Email viet hoa thuong hon hop - Message contains expected text\", function () {",
+              "    const actualMessage = json.message || json.error || \"\";",
+              "    pm.expect(actualMessage).to.include(expectedMessage);",
+              "  });",
+              "}",
+              "",
+              "if (expectToken) {",
+              "  pm.test(\"[TC08] Email viet hoa thuong hon hop - Response has token\", function () {",
+              "    pm.expect(json.token).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "  if (json.token) {",
+              "    pm.collectionVariables.set(\"token\", json.token);",
+              "  }",
+              "}",
+              "",
+              "if (expectUser) {",
+              "  pm.test(\"[TC08] Email viet hoa thuong hon hop - Response has user object\", function () {",
+              "    pm.expect(json.user).to.be.an(\"object\");",
+              "    pm.expect(json.user.email).to.eql(expectedUserEmail);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"NEWUSER@EXAMPLE.COM\",\n  \"password\": \"12345678\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC08 - Email viet hoa thuong hon hop. Body da co san, bam Send."
+      },
+      "response": []
+    },
+    {
+      "name": "TC09 - Email co khoang trang dau cuoi",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 200;",
+              "const expectedMessage = \"\";",
+              "const expectToken = true;",
+              "const expectUser = true;",
+              "const expectedUserEmail = \"newuser@example.com\";",
+              "",
+              "pm.test(\"[TC09] Email co khoang trang dau cuoi - Status code is 200\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "if (expectedMessage) {",
+              "  pm.test(\"[TC09] Email co khoang trang dau cuoi - Message contains expected text\", function () {",
+              "    const actualMessage = json.message || json.error || \"\";",
+              "    pm.expect(actualMessage).to.include(expectedMessage);",
+              "  });",
+              "}",
+              "",
+              "if (expectToken) {",
+              "  pm.test(\"[TC09] Email co khoang trang dau cuoi - Response has token\", function () {",
+              "    pm.expect(json.token).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "  if (json.token) {",
+              "    pm.collectionVariables.set(\"token\", json.token);",
+              "  }",
+              "}",
+              "",
+              "if (expectUser) {",
+              "  pm.test(\"[TC09] Email co khoang trang dau cuoi - Response has user object\", function () {",
+              "    pm.expect(json.user).to.be.an(\"object\");",
+              "    pm.expect(json.user.email).to.eql(expectedUserEmail);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"  newuser@example.com  \",\n  \"password\": \"12345678\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC09 - Email co khoang trang dau cuoi. Body da co san, bam Send."
+      },
+      "response": []
+    },
+    {
+      "name": "TC10 - Password co khoang trang dau cuoi",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedStatus = 401;",
+              "const expectedMessage = \"Invalid credentials\";",
+              "",
+              "pm.test(\"[TC10] Password co khoang trang dau cuoi - Status code is 401\", function () {",
+              "  pm.response.to.have.status(expectedStatus);",
+              "});",
+              "",
+              "let json = {};",
+              "try {",
+              "  json = pm.response.json();",
+              "} catch (error) {",
+              "  json = {};",
+              "}",
+              "",
+              "pm.test(\"[TC10] Password co khoang trang dau cuoi - Message contains expected text\", function () {",
+              "  const actualMessage = json.message || json.error || \"\";",
+              "  pm.expect(actualMessage).to.include(expectedMessage);",
+              "});",
+              "",
+              "pm.test(\"[TC10] Password co khoang trang dau cuoi - Response does not include token\", function () {",
+              "  pm.expect(json.token).to.be.undefined;",
+              "});",
+              "",
+              "pm.test(\"[TC10] Password co khoang trang dau cuoi - Response does not include user object\", function () {",
+              "  pm.expect(json.user).to.be.undefined;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \" 12345678 \"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "TC10 - Password co khoang trang dau cuoi. Body da co san, bam Send."
+      },
+      "response": []
+    }
+  ]
+}

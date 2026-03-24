@@ -7,10 +7,10 @@ Register,Thieu ten,POST,/api/auth/register,NONE,,"{""email"":""newuser3@example.
 Register,Thieu mat khau,POST,/api/auth/register,NONE,,"{""email"":""newuser4@example.com"",""fullName"":""Nguyen Van A""}",400,Password must be at least
 Register,Thieu email,POST,/api/auth/register,NONE,,"{""password"":""StrongPass123"",""fullName"":""Nguyen Van A""}",400,Invalid email
 Login,Dang nhap thanh cong,POST,/api/auth/login,NONE,Da co user hop le,"{""email"":""newuser@example.com"",""password"":""StrongPass123""}",200,
-Login,Sai mat khau,POST,/api/auth/login,NONE,User ton tai nhung mat khau sai,"{""email"":""newuser@example.com"",""password"":""WrongPass""}",400,Invalid credentials
-Login,Email khong hop le,POST,/api/auth/login,NONE,,"{""email"":""bad-email"",""password"":""StrongPass123""}",400,Invalid credentials
-Login,Thieu mat khau,POST,/api/auth/login,NONE,,"{""email"":""newuser@example.com""}",400,Invalid credentials
-Login,Email khong ton tai,POST,/api/auth/login,NONE,User khong ton tai,"{""email"":""missing@example.com"",""password"":""StrongPass123""}",400,Invalid credentials
+Login,Sai mat khau,POST,/api/auth/login,NONE,User ton tai nhung mat khau sai,"{""email"":""newuser@example.com"",""password"":""WrongPass""}",401,Invalid credentials
+Login,Email khong hop le,POST,/api/auth/login,NONE,,"{""email"":""bad-email"",""password"":""StrongPass123""}",400,Invalid email
+Login,Thieu mat khau,POST,/api/auth/login,NONE,,"{""email"":""newuser@example.com""}",400,Missing required fields
+Login,Email khong ton tai,POST,/api/auth/login,NONE,User khong ton tai,"{""email"":""missing@example.com"",""password"":""StrongPass123""}",401,Invalid credentials
 Create Event,Khong co token,POST,/api/events,NONE,,"{""title"":""Event No Token"",""startDate"":""2026-02-10"",""startTime"":""09:00"",""endTime"":""10:00""}",401,Token is not valid
 Create Event,Thieu truong bat buoc,POST,/api/events,VALID_TOKEN,,"{}",400,Missing required fields
 Create Event,Loai su kien khong hop le,POST,/api/events,VALID_TOKEN,,"{""title"":""Event A"",""type"":""INVALID"",""startDate"":""2026-02-10"",""startTime"":""09:00"",""endTime"":""10:00""}",400,Invalid event type

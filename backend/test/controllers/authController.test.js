@@ -243,7 +243,44 @@ describe('Bộ điều khiển Auth - Đăng nhập', () => {
     });
 
     describe('Xác thực thất bại', () => {
-        it('nên trả về 400 nếu mật khẩu không chính xác', async () => {
+        it('nên trả về 400 nếu thiếu trường bắt buộc', async () => {
+            req.body = {
+                email: validLoginData.email
+            };
+
+            await login(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ message: 'Missing required fields' });
+        });
+
+        it('nên trả về 400 nếu email không hợp lệ', async () => {
+            req.body = {
+                email: 'invalid-email',
+                password: validLoginData.password
+            };
+
+            await login(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ message: 'Invalid email' });
+        });
+
+        it('nên trả về 401 nếu người dùng không tồn tại', async () => {
+            req.body = {
+                email: 'missing@example.com',
+                password: validLoginData.password
+            };
+
+            User.findOne.mockResolvedValue(null);
+
+            await login(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(res.json).toHaveBeenCalledWith({ message: 'Invalid credentials' });
+        });
+
+        it('nên trả về 401 nếu mật khẩu không chính xác', async () => {
             req.body = { ...validLoginData };
 
             User.findOne.mockResolvedValue(mockUser);
@@ -251,7 +288,7 @@ describe('Bộ điều khiển Auth - Đăng nhập', () => {
 
             await login(req, res);
 
-            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.status).toHaveBeenCalledWith(401);
             expect(res.json).toHaveBeenCalledWith({ message: 'Invalid credentials' });
         });
     });
